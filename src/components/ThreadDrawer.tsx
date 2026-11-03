@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { MessageSquare, Send, X } from 'lucide-react';
+import { Avatar } from './ui/Avatar';
+import { Button } from './ui/Button';
 import {
   formatTimeShort,
   getInitials,
@@ -45,7 +47,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
   return (
     <aside
       aria-label="Message thread replies"
-      className="flex h-full w-96 shrink-0 flex-col border-l border-slate-200 bg-white"
+      className="flex h-full w-96 shrink-0 flex-col border-l border-slate-200 bg-white shadow-sm"
     >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3.5">
@@ -71,9 +73,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
         {/* Root Message */}
         <div className="border-b border-slate-200 pb-4">
           <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-xs font-semibold text-white">
-              {getInitials(rootMessage.user_name)}
-            </div>
+            <Avatar userName={rootMessage.user_name} size="md" className="h-8 w-8 shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline gap-2 text-xs">
                 <span className="font-semibold text-slate-900">{rootMessage.user_name}</span>
@@ -103,9 +103,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
           <div className="space-y-4">
             {replies.map((reply) => (
               <div key={reply.message_id} className="flex items-start gap-3">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-800 text-xs font-semibold text-white">
-                  {getInitials(reply.user_name)}
-                </div>
+                <Avatar userName={reply.user_name} size="sm" className="h-7 w-7 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2 text-xs">
                     <span className="font-semibold text-slate-900">{reply.user_name}</span>
@@ -135,16 +133,18 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             placeholder="Reply in thread..."
-            className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none"
+            className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-1 focus:ring-blue-600/20 focus:outline-none"
           />
-          <button
+          <Button
             type="submit"
+            variant="primary"
+            size="md"
             disabled={!replyText.trim() || sending}
+            loading={sending}
             aria-label="Send thread reply"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:opacity-40"
           >
-            <Send className="h-4 w-4" />
-          </button>
+            <Send className="h-4 w-4 shrink-0" />
+          </Button>
         </div>
       </form>
     </aside>

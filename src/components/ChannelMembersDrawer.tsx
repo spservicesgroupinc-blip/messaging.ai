@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import { Avatar } from './ui/Avatar';
+import { Button } from './ui/Button';
 import {
   getInitials,
   type PublicUser,
@@ -64,11 +66,11 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
   return (
     <aside
       aria-label="Channel members and access"
-      className="flex h-full w-80 shrink-0 flex-col border-l border-slate-200 bg-white"
+      className="flex h-full w-80 shrink-0 flex-col border-l border-slate-200 bg-white shadow-sm"
     >
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3.5">
         <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-slate-600" />
+          <Users className="h-4 w-4 shrink-0 text-slate-600" />
           <h2 className="text-sm font-semibold text-slate-900">Channel Access</h2>
         </div>
         <button
@@ -82,12 +84,12 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
       </div>
 
       <div className="flex-1 space-y-6 overflow-y-auto p-4">
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-900">
-            {channel.is_private && <Lock className="h-3.5 w-3.5 text-slate-700" />}
+            {channel.is_private && <Lock className="h-3.5 w-3.5 shrink-0 text-slate-700" />}
             <span>{channel.is_private ? 'Private Channel' : 'Public Workspace Channel'}</span>
           </div>
-          <p className="mt-1 text-xs leading-relaxed text-slate-600">
+          <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
             {channel.is_private
               ? 'Access is restricted to invited members of this private channel.'
               : 'All authenticated workspace members can read and post here.'}
@@ -104,16 +106,18 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="teammate@company.com"
-                className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none"
+                className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-1 focus:ring-blue-600/20 focus:outline-none"
               />
-              <button
+              <Button
                 type="submit"
+                variant="primary"
+                size="sm"
                 disabled={adding}
-                className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap shrink-0"
+                loading={adding}
               >
-                <UserPlus className="h-3.5 w-3.5" />
+                <UserPlus className="h-3.5 w-3.5 shrink-0" />
                 Add
-              </button>
+              </Button>
             </form>
 
             {nonMembers.length > 0 && (
@@ -122,19 +126,23 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
                 {nonMembers.map((u) => (
                   <div
                     key={u.user_id}
-                    className="flex items-center justify-between rounded-md border border-slate-200 px-2.5 py-1.5 text-xs"
+                    className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2 text-xs"
                   >
-                    <div className="truncate pr-2">
-                      <span className="font-medium text-slate-900">{u.full_name}</span>
-                      <span className="block truncate text-slate-500">{u.email}</span>
+                    <div className="flex items-center gap-2 truncate pr-2">
+                      <Avatar userName={u.full_name} size="sm" className="h-6 w-6" />
+                      <div className="min-w-0">
+                        <span className="font-medium text-slate-900 block">{u.full_name}</span>
+                        <span className="block truncate text-slate-500 text-[11px]">{u.email}</span>
+                      </div>
                     </div>
-                    <button
+                    <Button
                       type="button"
+                      variant="secondary"
+                      size="sm"
                       onClick={() => onAddMember(u.email)}
-                      className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-800 hover:bg-slate-200 whitespace-nowrap shrink-0"
                     >
                       Grant Access
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -154,24 +162,22 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
             <span className="font-mono tabular-nums text-slate-500">{members.length}</span>
           </div>
 
-          <div className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+          <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
             {members.map((member) => {
               const isCreator = channel.created_by === member.user_id;
               return (
                 <div
                   key={member.user_id}
-                  className="flex items-center justify-between gap-2 px-3 py-2.5"
+                  className="flex items-center justify-between gap-2 px-3 py-3"
                 >
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-900 text-xs font-semibold text-white">
-                      {getInitials(member.full_name)}
-                    </div>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar userName={member.full_name} size="md" className="h-8 w-8 shrink-0" />
                     <div className="min-w-0">
                       <div className="truncate text-xs font-semibold text-slate-900">
                         {member.full_name}
                         {member.user_id === currentUserId ? ' (you)' : ''}
                       </div>
-                      <div className="truncate text-xs text-slate-500">
+                      <div className="truncate text-[11px] text-slate-500">
                         {member.role_title} &middot; {isCreator ? 'Owner' : 'Member'}
                       </div>
                     </div>
@@ -181,14 +187,15 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
                     !channel.dm_participants &&
                     member.user_id !== currentUserId &&
                     !isCreator && (
-                      <button
+                      <Button
                         type="button"
+                        variant="danger"
+                        size="sm"
                         onClick={() => onRemoveMember(member.user_id)}
                         aria-label={`Remove ${member.full_name} from channel`}
-                        className="rounded-md p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
                       >
-                        <UserMinus className="h-3.5 w-3.5" />
-                      </button>
+                        <UserMinus className="h-3.5 w-3.5 shrink-0" />
+                      </Button>
                     )}
                 </div>
               );

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowRight, Lock, Mail, ShieldCheck, User } from 'lucide-react';
+import { Button } from './ui/Button';
 import { callSheetsBackend } from '../services/gasClient';
 import {
   validateLoginInput,
@@ -74,30 +75,33 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthenticated }) => {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 py-12 text-slate-900">
+    <main className="min-h-screen flex-col items-center justify-center bg-slate-50 px-4 py-12 text-slate-900">
       <div className="w-full max-w-md">
-        <div className="mb-6 text-center">
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">
+        <div className="mb-8 text-center">
+          <div className="inline-flex items-center justify-center h-10 w-10 rounded-lg bg-blue-600 text-white mb-3">
+            <span className="text-xl font-bold">R</span>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
             Relay
           </h1>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-sm text-slate-500">
             {mode === 'login' ? 'Sign in to your workspace' : 'Create your workspace account'}
           </p>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs sm:p-8">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           {/* Mode Switcher */}
-          <div className="mb-6 grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1">
+          <div className="mb-6 inline-flex items-center gap-1 rounded-xl bg-slate-100 p-1">
             <button
               type="button"
               onClick={() => {
                 setMode('login');
                 setError('');
               }}
-              className={`rounded-md py-2 text-xs font-semibold transition-colors whitespace-nowrap shrink-0 ${
+              className={`rounded-lg py-2 px-4 text-xs font-semibold transition-colors whitespace-nowrap ${
                 mode === 'login'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               Sign In
@@ -108,17 +112,17 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthenticated }) => {
                 setMode('signup');
                 setError('');
               }}
-              className={`rounded-md py-2 text-xs font-semibold transition-colors whitespace-nowrap shrink-0 ${
+              className={`rounded-lg py-2 px-4 text-xs font-semibold transition-colors whitespace-nowrap ${
                 mode === 'signup'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               Create Account
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             {mode === 'signup' && (
               <>
                 <div>
@@ -129,7 +133,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthenticated }) => {
                     Full Name
                   </label>
                   <div className="relative mt-1.5">
-                    <User className="pointer-events-none absolute top-2.5 left-3 h-4 w-4 text-slate-400" />
+                    <User className="pointer-events-none absolute top-3 left-3 h-4 w-4 text-slate-400" />
                     <input
                       id="auth-full-name"
                       type="text"
@@ -137,7 +141,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthenticated }) => {
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="Elena Rostova"
-                      className="w-full rounded-lg border border-slate-300 bg-white py-2 pr-3.5 pl-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none"
+                      className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pr-3.5 pl-10 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-1 focus:ring-blue-600/20 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -150,14 +154,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthenticated }) => {
                     Role / Title <span className="font-normal text-slate-400">(optional)</span>
                   </label>
                   <div className="relative mt-1.5">
-                    <ShieldCheck className="pointer-events-none absolute top-2.5 left-3 h-4 w-4 text-slate-400" />
+                    <ShieldCheck className="pointer-events-none absolute top-3 left-3 h-4 w-4 text-slate-400" />
                     <input
                       id="auth-role-title"
                       type="text"
                       value={roleTitle}
                       onChange={(e) => setRoleTitle(e.target.value)}
                       placeholder="Engineer"
-                      className="w-full rounded-lg border border-slate-300 bg-white py-2 pr-3.5 pl-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none"
+                      className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pr-3.5 pl-10 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-1 focus:ring-blue-600/20 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -172,7 +176,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthenticated }) => {
                 Email
               </label>
               <div className="relative mt-1.5">
-                <Mail className="pointer-events-none absolute top-2.5 left-3 h-4 w-4 text-slate-400" />
+                <Mail className="pointer-events-none absolute top-3 left-3 h-4 w-4 text-slate-400" />
                 <input
                   id="auth-email"
                   type="email"
@@ -180,7 +184,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthenticated }) => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@company.com"
-                  className="w-full rounded-lg border border-slate-300 bg-white py-2 pr-3.5 pl-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none"
+                  className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pr-3.5 pl-10 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-1 focus:ring-blue-600/20 focus:outline-none"
                 />
               </div>
             </div>
@@ -193,7 +197,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthenticated }) => {
                 Password
               </label>
               <div className="relative mt-1.5">
-                <Lock className="pointer-events-none absolute top-2.5 left-3 h-4 w-4 text-slate-400" />
+                <Lock className="pointer-events-none absolute top-3 left-3 h-4 w-4 text-slate-400" />
                 <input
                   id="auth-password"
                   type="password"
@@ -201,36 +205,33 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthenticated }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={mode === 'signup' ? 'At least 6 characters' : 'Enter your password'}
-                  className="w-full rounded-lg border border-slate-300 bg-white py-2 pr-3.5 pl-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none"
+                  className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pr-3.5 pl-10 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-1 focus:ring-blue-600/20 focus:outline-none"
                 />
               </div>
             </div>
 
             {error && (
-              <div
-                role="alert"
-                className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs font-medium text-red-800"
-              >
+              <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs font-medium text-red-800">
                 {error}
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
-              disabled={submitting}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap shrink-0"
+              variant="primary"
+              size="md"
+              loading={submitting}
+              className="w-full"
             >
-              <span>
-                {submitting
-                  ? mode === 'signup'
-                    ? 'Creating Account...'
-                    : 'Signing In...'
-                  : mode === 'signup'
-                  ? 'Create Account'
-                  : 'Sign In'}
-              </span>
+              {submitting
+                ? mode === 'signup'
+                  ? 'Creating Account...'
+                  : 'Signing In...'
+                : mode === 'signup'
+                ? 'Create Account'
+                : 'Sign In'}
               <ArrowRight className="h-4 w-4" />
-            </button>
+            </Button>
           </form>
         </div>
       </div>

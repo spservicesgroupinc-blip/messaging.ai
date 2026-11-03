@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Hash, Lock, Plus, X } from 'lucide-react';
+import { Button } from './ui/Button';
+import { Avatar } from './ui/Avatar';
 import {
   normalizeChannelName,
   type PublicUser,
@@ -97,12 +99,15 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-channel-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
-      <div className="w-full max-w-lg overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+      <div className="w-full max-w-lg overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
           <h2 id="create-channel-title" className="text-base font-semibold text-slate-900">
             Create a {isPrivate ? 'Private' : 'Public'} Channel
@@ -124,14 +129,14 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
               type="button"
               aria-label="Visibility: Public Channel"
               onClick={() => setIsPrivate(false)}
-              className={`flex items-start gap-3 rounded-lg border p-3.5 text-left transition-colors ${
+              className={`flex flex-col items-start gap-3 rounded-xl border p-4 text-left transition-colors ${
                 !isPrivate
-                  ? 'border-blue-600 bg-blue-50/40 text-slate-900'
+                  ? 'border-blue-600 bg-blue-50 text-slate-900'
                   : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
               }`}
             >
               <Hash className="mt-0.5 h-4 w-4 shrink-0 text-slate-700" />
-              <div>
+              <div className="mt-1">
                 <div className="text-xs font-semibold text-slate-900">Public Channel</div>
                 <p className="mt-0.5 text-xs text-slate-500">
                   Anyone in the workspace can view and join
@@ -143,14 +148,14 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
               type="button"
               aria-label="Visibility: Private Channel"
               onClick={() => setIsPrivate(true)}
-              className={`flex items-start gap-3 rounded-lg border p-3.5 text-left transition-colors ${
+              className={`flex flex-col items-start gap-3 rounded-xl border p-4 text-left transition-colors ${
                 isPrivate
-                  ? 'border-blue-600 bg-blue-50/40 text-slate-900'
+                  ? 'border-blue-600 bg-blue-50 text-slate-900'
                   : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
               }`}
             >
               <Lock className="mt-0.5 h-4 w-4 shrink-0 text-slate-700" />
-              <div>
+              <div className="mt-1">
                 <div className="text-xs font-semibold text-slate-900">Private Channel</div>
                 <p className="mt-0.5 text-xs text-slate-500">
                   Only invited members can view and join
@@ -169,9 +174,9 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
             </label>
             <div className="relative mt-1.5">
               {isPrivate ? (
-                <Lock className="pointer-events-none absolute top-2.5 left-3 h-4 w-4 text-slate-400" />
+                <Lock className="pointer-events-none absolute top-3 left-3 h-4 w-4 text-slate-400" />
               ) : (
-                <Hash className="pointer-events-none absolute top-2.5 left-3 h-4 w-4 text-slate-400" />
+                <Hash className="pointer-events-none absolute top-3 left-3 h-4 w-4 text-slate-400" />
               )}
               <input
                 id="new-channel-name"
@@ -180,7 +185,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. exec-strategy or release-ops"
-                className="w-full rounded-lg border border-slate-300 bg-white py-2 pr-3.5 pl-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none"
+                className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pr-3.5 pl-10 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-1 focus:ring-blue-600/20 focus:outline-none"
               />
             </div>
             {slugPreview && (
@@ -208,19 +213,19 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What is this channel used for?"
-              className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none"
+              className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-1 focus:ring-blue-600/20 focus:outline-none"
             />
           </div>
 
           {/* Optional Member Invitations for Private Channels */}
           {isPrivate && (
-            <div className="space-y-2.5 rounded-lg border border-slate-200 bg-slate-50 p-3.5">
+            <div className="space-y-2.5 rounded-lg border border-slate-200 bg-slate-50 p-4">
               <div className="text-xs font-semibold text-slate-800">
                 Add Members to Private Channel
               </div>
 
               {otherUsers.length > 0 && (
-                <div className="max-h-28 space-y-1 overflow-y-auto">
+                <div className="max-h-32 space-y-1 overflow-y-auto">
                   {otherUsers.map((u) => {
                     const checked = selectedEmails.includes(u.email);
                     return (
@@ -228,9 +233,12 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
                         key={u.user_id}
                         className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-xs hover:bg-slate-100"
                       >
-                        <div>
-                          <span className="font-medium text-slate-900">{u.full_name}</span>
-                          <span className="text-slate-500"> &middot; {u.email}</span>
+                        <div className="flex items-center gap-2">
+                          <Avatar userName={u.full_name} size="sm" className="h-6 w-6" />
+                          <div className="truncate">
+                            <span className="font-medium text-slate-900">{u.full_name}</span>
+                            <span className="text-slate-500"> &middot; {u.email}</span>
+                          </div>
                         </div>
                         <input
                           type="checkbox"
@@ -251,44 +259,45 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
                   value={customEmailInput}
                   onChange={(e) => setCustomEmailInput(e.target.value)}
                   placeholder="Add teammate by email..."
-                  className="flex-1 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none"
+                  className="flex-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-1 focus:ring-blue-600/20 focus:outline-none"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="sm"
                   onClick={handleAddCustomEmail}
-                  className="flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 whitespace-nowrap shrink-0"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   Add
-                </button>
+                </Button>
               </div>
             </div>
           )}
 
           {error && (
-            <div
-              role="alert"
-              className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs font-medium text-red-800"
-            >
+            <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs font-medium text-red-800">
               {error}
             </div>
           )}
 
           <div className="flex items-center justify-end gap-2.5 pt-2">
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={onClose}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 whitespace-nowrap shrink-0"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant="primary"
+              size="sm"
               disabled={submitting}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap shrink-0"
+              loading={submitting}
             >
               {submitting ? 'Creating Channel...' : 'Create Channel'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
