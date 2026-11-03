@@ -4,6 +4,17 @@
   :root {
     --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+
+    /* Slack-inspired color tokens */
+    --color-sidebar: #0b1120;
+    --color-sidebar-active: rgba(255, 255, 255, 0.07);
+    --color-surface-hover: #f3f4f6;
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #475569;
+    --color-text-muted: #94a3b8;
+    --color-border: #e2e8f0;
+    --color-blue-600: #2563eb;
+    --color-red-600: #dc2626;
   }
 
   body {
@@ -12,5 +23,77 @@
 
   code, pre, .font-mono {
     font-family: var(--font-mono);
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 transition-colors active:scale-95 transition-transform;
+  }
+
+  .btn-primary {
+    @apply bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400;
+  }
+
+  .btn-secondary {
+    @apply bg-white border border-slate-300 text-slate-900 hover:bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200;
+  }
+
+  .btn-ghost {
+    @apply hover:bg-slate-100 text-slate-700 disabled:text-slate-400;
+  }
+
+  .btn-danger {
+    @apply text-red-600 hover:bg-red-50 disabled:text-red-300 disabled:bg-transparent;
+  }
+
+  .btn-sm {
+    @apply px-2.5 py-1.5 text-xs;
+  }
+
+  .btn-md {
+    @apply px-3.5 py-2 text-sm;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-slate-300 bg-white py-2 pr-3.5 pl-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none;
+  }
+
+  .label {
+    @apply block text-xs font-semibold text-slate-700;
+  }
+
+  .card {
+    @apply rounded-xl border border-slate-200 bg-white p-6 shadow-xs;
+  }
+
+  .avatar {
+    @apply flex items-center justify-center rounded-full text-white font-semibold shadow-sm;
+  }
+}
+
+@layer base {
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
   }
 }
