@@ -24,6 +24,25 @@
   code, pre, .font-mono {
     font-family: var(--font-mono);
   }
+
+  /* Mobile safe area support for iPhone notch/home indicator */
+  .safe-area-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .safe-area-top {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+
+  /* Prevent text size inflation on iOS */
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 @layer components {

@@ -10,6 +10,9 @@ import { Header } from './components/Header';
 import { MessageItem } from './components/MessageItem';
 import { MessageList } from './components/MessageList';
 import { Composer } from './components/Composer';
+import { OfflineIndicator } from './components/OfflineIndicator';
+import { PushNotificationBadge } from './components/ui/PushNotificationBadge';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import {
   callSheetsBackend,
   getSavedActiveChannelId,
@@ -27,7 +30,7 @@ import {
 
 const QUICK_EMOJIS = ['👍', '✅', '🚀', '🎯'];
 
-export default function App() {
+function AppContent() {
   const [currentUser, setCurrentUser] = useState<PublicUser | null>(() =>
     getSavedSessionUser()
   );
@@ -444,7 +447,9 @@ export default function App() {
   }
 
   return (
-    <div className='flex h-screen w-screen overflow-hidden bg-white text-slate-900'>
+    <div className='flex h-screen w-screen overflow-hidden bg-white text-slate-900 safe-area-bottom'>
+      <OfflineIndicator />
+
       <Sidebar
         currentUser={currentUser}
         workspaceUsers={workspaceUsers}
@@ -478,7 +483,7 @@ export default function App() {
 
         <div className='flex min-h-0 flex-1 overflow-hidden'>
           <main className='flex min-w-0 flex-1 flex-col bg-white'>
-            <div className='flex-1 overflow-y-auto px-4 py-6 sm:px-6'>
+            <div className='flex-1 overflow-y-auto px-4 py-6 sm:px-6 safe-area-bottom'>
               <MessageList
                 messages={rootMessages}
                 currentUser={currentUser}
@@ -549,6 +554,8 @@ export default function App() {
         </div>
       </div>
 
+      <PushNotificationBadge currentUserId={currentUser.user_id} />
+
       <CreateChannelModal
         isOpen={isCreateChannelOpen}
         defaultPrivate={createChannelDefaultPrivate}
@@ -559,4 +566,12 @@ export default function App() {
       />
     </div>
   );
-};
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
+  );
+}
