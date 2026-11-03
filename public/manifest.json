@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "Relay Workspace",
   "short_name": "Relay",
   "description": "Real-time team messaging workspace with private channels, threaded discussions, and persistent chat history.",

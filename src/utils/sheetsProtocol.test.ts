@@ -172,4 +172,45 @@ test('private channels enforce strict membership access control and message pers
   });
   assert.equal(bobReadAfterInvite.response.ok, true);
   assert.equal(bobReadAfterInvite.response.messages?.length, 2);
+
+  // Alice edits the channel name and description
+  const editRes = executeSheetAction(db, {
+    action: 'editChannel',
+    userId: aliceId,
+    channelId: privateChannel.channel_id,
+    name: 'Safety & Security Review!',
+    description: 'Updated audit channel description',
+    isPrivate: true,
+  });
+  assert.equal(editRes.response.ok, true);
+  assert.equal(editRes.response.channel?.name, 'safety-security-review');
+  assert.equal(editRes.response.channel?.description, 'Updated audit channel description');
+  db = editRes.db;
+
+  // Duplicate channel name rejected on edit
+  const dupEdit = executeSheetAction(db, {
+    action: 'editChannel',
+    userId: aliceId,
+    channelId: privateChannel.channel_id,
+    name: 'general',
+  });
+  assert.equal(dupEdit.response.ok, false);
+
+  // Alice deletes the channel -> channel, memberships, and messages are removed
+  const delRes = executeSheetAction(db, {
+    action: 'deleteChannel',
+    userId: aliceId,
+    channelId: privateChannel.channel_id,
+  });
+  assert.equal(delRes.response.ok, true);
+  assert.equal(delRes.response.deletedChannelId, privateChannel.channel_id);
+  assert.equal(
+    delRes.db.Channels.some((c) => c.channel_id === privateChannel.channel_id),
+    false
+  );
+  assert.equal(
+    delRes.db.Messages.some((m) => m.channel_id === privateChannel.channel_id),
+    false
+  );
 });
+

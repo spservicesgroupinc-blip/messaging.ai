@@ -15,6 +15,9 @@ interface SidebarProps {
   onSelectChannel: (id: string) => void;
   onOpenDirectMessage: (id: string) => void;
   onCreateChannel: (isPrivate: boolean) => void;
+  onEditChannel?: (channel: SheetChannel) => void;
+  onDeleteChannel?: (channel: SheetChannel) => void;
+  onManageChannelMembers?: (channel: SheetChannel) => void;
   onSignOut: () => void;
   onToggleMobileSidebar: () => void;
 }
@@ -43,9 +46,21 @@ function NavigationSection({ title, children, onAdd, addLabel }: {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  currentUser, workspaceUsers, publicChannels, privateChannels, directMessageChannels = [],
-  activeChannelId, mobileSidebarOpen, onSelectChannel, onOpenDirectMessage,
-  onCreateChannel, onSignOut, onToggleMobileSidebar,
+  currentUser,
+  workspaceUsers,
+  publicChannels,
+  privateChannels,
+  directMessageChannels = [],
+  activeChannelId,
+  mobileSidebarOpen,
+  onSelectChannel,
+  onOpenDirectMessage,
+  onCreateChannel,
+  onEditChannel,
+  onDeleteChannel,
+  onManageChannelMembers,
+  onSignOut,
+  onToggleMobileSidebar,
 }) => {
   const sidebarRef = useRef<HTMLElement>(null);
   const toggleMobileRef = useRef(onToggleMobileSidebar);
@@ -107,13 +122,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Plus aria-hidden='true' className='ml-auto h-3.5 w-3.5 text-[#89928b]' />
           </button>
           <NavigationSection title='Channels' onAdd={() => onCreateChannel(false)} addLabel='Create new channel'>
-            {publicChannels.map((channel) => <ChannelItem key={channel.channel_id} channel={channel}
-              isActive={channel.channel_id === activeChannelId} onClick={onSelectChannel} />)}
+            {publicChannels.map((channel) => (
+              <ChannelItem
+                key={channel.channel_id}
+                channel={channel}
+                isActive={channel.channel_id === activeChannelId}
+                onClick={onSelectChannel}
+                onEditChannel={onEditChannel}
+                onDeleteChannel={onDeleteChannel}
+                onManageMembers={onManageChannelMembers}
+              />
+            ))}
             {publicChannels.length === 0 && <p className='px-2.5 py-1 text-xs text-[#626d65]'>No channels yet</p>}
           </NavigationSection>
           <NavigationSection title='Private channels' onAdd={() => onCreateChannel(true)} addLabel='Create private channel'>
-            {privateChannels.map((channel) => <ChannelItem key={channel.channel_id} channel={channel}
-              isActive={channel.channel_id === activeChannelId} onClick={onSelectChannel} />)}
+            {privateChannels.map((channel) => (
+              <ChannelItem
+                key={channel.channel_id}
+                channel={channel}
+                isActive={channel.channel_id === activeChannelId}
+                onClick={onSelectChannel}
+                onEditChannel={onEditChannel}
+                onDeleteChannel={onDeleteChannel}
+                onManageMembers={onManageChannelMembers}
+              />
+            ))}
             {privateChannels.length === 0 && <button type='button' onClick={() => onCreateChannel(true)}
               className='flex min-h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-sm text-[#626d65] hover:bg-[#e9ece9] hover:text-[#303934]'>
               <Lock aria-hidden='true' className='h-4 w-4 opacity-65' strokeWidth={1.75} /> Create private channel
@@ -148,4 +181,3 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </>
   );
 };
-

@@ -3,6 +3,7 @@ import { RefreshCw } from 'lucide-react';
 import { AuthView } from './components/AuthView';
 import { ChannelMembersDrawer } from './components/ChannelMembersDrawer';
 import { CreateChannelModal } from './components/CreateChannelModal';
+import { EditChannelModal } from './components/EditChannelModal';
 import { ThreadDrawer } from './components/ThreadDrawer';
 import { ChannelItem } from './components/ChannelItem';
 import { Sidebar } from './components/Sidebar';
@@ -55,6 +56,10 @@ function AppContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateChannelOpen, setIsCreateChannelOpen] = useState(false);
   const [createChannelDefaultPrivate, setCreateChannelDefaultPrivate] = useState(false);
+  const [channelModalTarget, setChannelModalTarget] = useState<{
+    channel: SheetChannel;
+    mode: 'edit' | 'delete';
+  } | null>(null);
   const [isMembersDrawerOpen, setIsMembersDrawerOpen] = useState(false);
   const [activeThreadMessageId, setActiveThreadMessageId] = useState<string | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -249,13 +254,14 @@ function AppContent() {
     }
   };
 
-  const handleSaveEditedMessage = async (messageId: string) => {
-    if (!currentUser || !editingContent.trim()) return;
+  const handleSaveEditedMessage = async (messageId: string, nextContent?: string) => {
+    const finalContent = (nextContent ?? editingContent).trim();
+    if (!currentUser || !finalContent) return;
     const res = await callSheetsBackend({
       action: 'editMessage',
       userId: currentUser.user_id,
       messageId,
-      content: editingContent.trim(),
+      content: finalContent,
     });
     if (res.ok && res.messages) {
       setMessages(res.messages);
@@ -315,6 +321,67 @@ function AppContent() {
       if (res.channels) setChannels(res.channels);
       if (res.memberships) setMemberships(res.memberships);
       setMessages([]);
+      return { ok: true };
+    }
+    return { ok: false, error: res.error };
+  };
+
+  const handleEditChannel = async (params: {
+    channelId: string;
+    name: string;
+    description: string;
+    isPrivate: boolean;
+  }) => {
+    if (!currentUser) return { ok: false, error: 'Not signed in' };
+    const res = await callSheetsBackend({
+      action: 'editChannel',
+      userId: currentUser.user_id,
+      channelId: params.channelId,
+      name: params.name,
+      description: params.description,
+      isPrivate: params.isPrivate,
+    });
+
+    if (res.ok) {
+      if (res.channels) {
+        setChannels(res.channels);
+      } else if (res.channel) {
+        setChannels((prev) =>
+          prev.map((c) => (c.channel_id === res.channel!.channel_id ? res.channel! : c))
+        );
+      }
+      if (res.memberships) setMemberships(res.memberships);
+      return { ok: true };
+    }
+    return { ok: false, error: res.error };
+  };
+
+  const handleDeleteChannel = async (channelId: string) => {
+    if (!currentUser) return { ok: false, error: 'Not signed in' };
+    const res = await callSheetsBackend({
+      action: 'deleteChannel',
+      userId: currentUser.user_id,
+      channelId,
+    });
+
+    if (res.ok) {
+      const nextChannels = res.channels || channels.filter((c) => c.channel_id !== channelId);
+      setChannels(nextChannels);
+      if (res.memberships) setMemberships(res.memberships);
+
+      if (activeChannelIdRef.current === channelId) {
+        const fallbackChannel =
+          nextChannels.find((c) => !c.dm_participants) || nextChannels[0];
+        const nextActiveId = fallbackChannel?.channel_id || '';
+        activeChannelIdRef.current = nextActiveId;
+        setActiveChannelId(nextActiveId);
+        saveActiveChannelId(nextActiveId);
+        if (nextActiveId) {
+          void handleSelectChannel(nextActiveId);
+        } else {
+          setMessages([]);
+        }
+      }
       return { ok: true };
     }
     return { ok: false, error: res.error };
@@ -475,6 +542,20 @@ function AppContent() {
           setCreateChannelDefaultPrivate(isPrivate);
           setIsCreateChannelOpen(true);
         }}
+        onEditChannel={(channel) => {
+          setMobileSidebarOpen(false);
+          setChannelModalTarget({ channel, mode: 'edit' });
+        }}
+        onDeleteChannel={(channel) => {
+          setMobileSidebarOpen(false);
+          setChannelModalTarget({ channel, mode: 'delete' });
+        }}
+        onManageChannelMembers={(channel) => {
+          setMobileSidebarOpen(false);
+          void handleSelectChannel(channel.channel_id);
+          setActiveThreadMessageId(null);
+          setIsMembersDrawerOpen(true);
+        }}
         onSignOut={handleSignOut}
         onToggleMobileSidebar={() => setMobileSidebarOpen((prev) => !prev)}
       />
@@ -511,7 +592,7 @@ function AppContent() {
                 }}
                 onSave={(id, content) => {
                   setEditingContent(content);
-                  handleSaveEditedMessage(id);
+                  void handleSaveEditedMessage(id, content);
                 }}
                 onCancelEdit={() => {
                   setEditingMessageId(null);
@@ -575,6 +656,14 @@ function AppContent() {
         workspaceUsers={workspaceUsers}
         currentUserId={currentUser.user_id}
         onCreateChannel={handleCreateChannel}
+      />
+
+      <EditChannelModal
+        channel={channelModalTarget?.channel ?? null}
+        mode={channelModalTarget?.mode ?? 'edit'}
+        onClose={() => setChannelModalTarget(null)}
+        onEditChannel={handleEditChannel}
+        onDeleteChannel={handleDeleteChannel}
       />
     </WorkspaceShell>
   );
