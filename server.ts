@@ -10,7 +10,7 @@ import {
   type SheetsDatabase,
 } from './src/utils/sheetsProtocol.ts';
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = path.resolve(process.cwd(), '.data');
 const DB_FILE = path.join(DATA_DIR, 'sheets-db.json');
 
