@@ -38,7 +38,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   onToggleReaction,
   onOpenThread,
   onContentChange,
-  quickEmojis = ['??', '?', '??', '??'],
+  quickEmojis = ['👍', '✅', '🚀', '🎯'],
 }) => {
   const currentDay = formatDateHeader(msg.created_at);
   const prevDay = prevMsg ? formatDateHeader(prevMsg.created_at) : '';
@@ -130,7 +130,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             <button
               type='button'
               onClick={() => onOpenThread(msg.message_id)}
-              aria-label={'Reply in thread to   + msg.content.slice(0, 24) +  '}
+              aria-label={`Reply in thread to "${msg.content.slice(0, 24)}"`}
               className='flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50 tabular-nums'
             >
               <MessageSquare className='h-3.5 w-3.5' />
@@ -160,7 +160,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 <button
                   type='button'
                   onClick={() => onEdit(msg.message_id)}
-                  aria-label={'Edit message   + msg.content.slice(0, 20) +  '}
+                  aria-label={`Edit message "${msg.content.slice(0, 20)}"`}
                   className='rounded p-1 text-slate-400 hover:bg-slate-200/70 hover:text-slate-700'
                 >
                   <Edit3 className='h-3.5 w-3.5' />
@@ -168,7 +168,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 <button
                   type='button'
                   onClick={() => onDelete(msg.message_id)}
-                  aria-label={'Delete message   + msg.content.slice(0, 20) +  '}
+                  aria-label={`Delete message "${msg.content.slice(0, 20)}"`}
                   className='rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600'
                 >
                   <Trash2 className='h-3.5 w-3.5' />

@@ -8,7 +8,7 @@ import {
   type SheetChannel,
 } from '../utils/sheetsProtocol';
 
-const QUICK_EMOJIS = ['??', '?', '??', '??'];
+const QUICK_EMOJIS = ['👍', '✅', '🚀', '🎯'];
 
 interface MessageListProps {
   messages: EnrichedMessage[];

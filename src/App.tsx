@@ -25,7 +25,7 @@ import {
   type SheetChannelMember,
 } from './utils/sheetsProtocol';
 
-const QUICK_EMOJIS = ['??', '?', '??', '??'];
+const QUICK_EMOJIS = ['👍', '✅', '🚀', '🎯'];
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<PublicUser | null>(() =>

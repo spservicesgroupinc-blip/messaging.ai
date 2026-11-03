@@ -51,7 +51,7 @@ export const Composer: React.FC<ComposerProps> = ({
           <div className='flex items-center gap-1'>
             <button
               type='button'
-              onClick={() => onFormatInsert('')}
+              onClick={() => onFormatInsert('`')}
               aria-label='Insert inline code'
               className='flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-200/60 hover:text-slate-900'
             >
