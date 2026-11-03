@@ -1,0 +1,6 @@
+{
+  "name": "Relay — Serverless Team Messaging on Google Sheets",
+  "description": "Real-time team messaging workspace with private channels, persistent chat history, and authentication powered by Google Apps Script and Google Sheets.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
