@@ -11,7 +11,7 @@ import { MessageItem } from './components/MessageItem';
 import { MessageList } from './components/MessageList';
 import { Composer } from './components/Composer';
 import { OfflineIndicator } from './components/OfflineIndicator';
-import { PushNotificationBadge } from './components/ui/PushNotificationBadge';
+import { WorkspaceShell } from './components/WorkspaceShell';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import {
   callSheetsBackend,
@@ -447,7 +447,17 @@ function AppContent() {
   }
 
   return (
-    <div className='flex h-screen w-screen overflow-hidden bg-white text-slate-900 safe-area-bottom'>
+    <WorkspaceShell
+      currentUser={currentUser}
+      isDirectMessage={Boolean(activeChannel?.dm_participants)}
+      onHome={() => { const home = publicChannels[0]; if (home) void handleSelectChannel(home.channel_id); }}
+      onDirectMessages={() => {
+        const partner = workspaceUsers.find(user => user.user_id !== currentUser.user_id) || currentUser;
+        void handleOpenDirectMessage(partner.user_id);
+      }}
+      onMembers={() => { setActiveThreadMessageId(null); setIsMembersDrawerOpen(prev => !prev); }}
+      onCreateChannel={() => { setCreateChannelDefaultPrivate(false); setIsCreateChannelOpen(true); }}
+    >
       <OfflineIndicator />
 
       <Sidebar
@@ -455,11 +465,13 @@ function AppContent() {
         workspaceUsers={workspaceUsers}
         publicChannels={publicChannels}
         privateChannels={privateChannels}
+        directMessageChannels={channels.filter(channel => Boolean(channel.dm_participants))}
         activeChannelId={activeChannelId}
         mobileSidebarOpen={mobileSidebarOpen}
         onSelectChannel={handleSelectChannel}
         onOpenDirectMessage={handleOpenDirectMessage}
         onCreateChannel={(isPrivate) => {
+          setMobileSidebarOpen(false);
           setCreateChannelDefaultPrivate(isPrivate);
           setIsCreateChannelOpen(true);
         }}
@@ -477,13 +489,13 @@ function AppContent() {
           onRefresh={() => syncWorkspace(currentUser.user_id, activeChannelId)}
           syncing={syncing}
           isMembersDrawerOpen={isMembersDrawerOpen}
-          onToggleMembers={() => setIsMembersDrawerOpen((prev) => !prev)}
+          onToggleMembers={() => { setActiveThreadMessageId(null); setIsMembersDrawerOpen((prev) => !prev); }}
           onToggleMobileSidebar={() => setMobileSidebarOpen((prev) => !prev)}
         />
 
         <div className='flex min-h-0 flex-1 overflow-hidden'>
-          <main className='flex min-w-0 flex-1 flex-col bg-white'>
-            <div className='flex-1 overflow-y-auto px-4 py-6 sm:px-6 safe-area-bottom'>
+          <main id='conversation' tabIndex={-1} className='flex min-w-0 flex-1 flex-col bg-white outline-none'>
+            <div className='min-h-0 flex-1 overflow-y-auto overscroll-contain'>
               <MessageList
                 messages={rootMessages}
                 currentUser={currentUser}
@@ -554,7 +566,7 @@ function AppContent() {
         </div>
       </div>
 
-      <PushNotificationBadge currentUserId={currentUser.user_id} />
+
 
       <CreateChannelModal
         isOpen={isCreateChannelOpen}
@@ -564,7 +576,7 @@ function AppContent() {
         currentUserId={currentUser.user_id}
         onCreateChannel={handleCreateChannel}
       />
-    </div>
+    </WorkspaceShell>
   );
 }
 
@@ -575,3 +587,4 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+

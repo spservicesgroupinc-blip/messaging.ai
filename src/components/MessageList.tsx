@@ -1,15 +1,9 @@
 import React, { useMemo } from 'react';
-import { Hash, Lock } from 'lucide-react';
+import { Hash, LockKeyhole, MessagesSquare, Search } from 'lucide-react';
 import { MessageItem } from './MessageItem';
-import {
-  formatDateHeader,
-  type EnrichedMessage,
-  type PublicUser,
-  type SheetChannel,
-} from '../utils/sheetsProtocol';
+import { type EnrichedMessage, type PublicUser, type SheetChannel } from '../utils/sheetsProtocol';
 
 const QUICK_EMOJIS = ['👍', '✅', '🚀', '🎯'];
-
 interface MessageListProps {
   messages: EnrichedMessage[];
   currentUser: PublicUser | null;
@@ -28,103 +22,51 @@ interface MessageListProps {
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
 }
 
-export const MessageList: React.FC<MessageListProps> = ({
-  messages,
-  currentUser,
-  loadingChannel,
-  activeChannel,
-  searchQuery,
-  editingMessageId,
-  editingContent,
-  onEdit,
-  onSave,
-  onCancelEdit,
-  onDelete,
-  onToggleReaction,
-  onOpenThread,
-  onEditingContentChange,
-  messagesEndRef,
-}) => {
+export const MessageList: React.FC<MessageListProps> = ({ messages, currentUser, loadingChannel, activeChannel, searchQuery, editingMessageId, editingContent, onEdit, onSave, onCancelEdit, onDelete, onToggleReaction, onOpenThread, onEditingContentChange, messagesEndRef }) => {
   const rootMessages = useMemo(() => {
     const roots = messages.filter((m) => !m.parent_message_id);
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return roots;
-    return roots.filter(
-      (m) =>
-        m.content.toLowerCase().includes(q) ||
-        m.user_name.toLowerCase().includes(q)
-    );
+    const query = searchQuery.trim().toLowerCase();
+    return query ? roots.filter((m) => m.content.toLowerCase().includes(query) || m.user_name.toLowerCase().includes(query)) : roots;
   }, [messages, searchQuery]);
-
   const isDm = Boolean(activeChannel?.dm_participants);
-  const channelName = isDm ? 'Direct Message' : '#' + (activeChannel?.name ?? 'channel');
+  const ChannelIcon = isDm ? MessagesSquare : activeChannel?.is_private ? LockKeyhole : Hash;
 
-  if (loadingChannel) {
-    return (
-      <div className='space-y-4 py-8'>
-        {[1, 2, 3].map((n) => (
-          <div key={n} className='flex animate-pulse items-start gap-3'>
-            <div className='h-9 w-9 rounded-lg bg-slate-200' />
-            <div className='flex-1 space-y-2'>
-              <div className='h-3 w-36 rounded bg-slate-200' />
-              <div className='h-4 w-2/3 rounded bg-slate-100' />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (rootMessages.length === 0) {
-    return (
-      <div className='mx-auto my-12 max-w-md rounded-xl border border-slate-200 bg-slate-50/70 p-6 text-center'>
-        <div className='mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white'>
-          {activeChannel?.is_private ? (
-            <Lock className='h-5 w-5' />
-          ) : (
-            <Hash className='h-5 w-5' />
-          )}
-        </div>
-        <h2 className='mt-3 text-base font-bold text-slate-900'>
-          {searchQuery ? 'No messages match your filter' : 'Welcome to ' + channelName}
-        </h2>
-        <p className='mt-1.5 text-xs leading-relaxed text-slate-600'>
-          {searchQuery
-            ? 'Try clearing the search filter in the top bar.'
-            : activeChannel?.is_private
-            ? 'This is the start of a private channel. Only invited members can view and post messages here.'
-            : 'This is the beginning of the channel. Type a message below to start the conversation.'}
-        </p>
-      </div>
-    );
-  }
+  if (loadingChannel) return (
+    <div className='space-y-7 px-4 py-8 sm:px-6' role='status' aria-label='Loading messages' aria-busy='true'>
+      {[0, 1, 2, 3].map((number) => <div key={number} className='flex animate-pulse items-start gap-3 motion-reduce:animate-none'>
+        <div className='h-9 w-9 shrink-0 rounded-md bg-[#ecefed]' />
+        <div className='flex-1 space-y-2'><div className='h-3 w-28 rounded bg-[#e9ecea]' /><div className='h-3 w-4/5 rounded bg-[#f0f2f1]' /><div className='h-3 w-2/5 rounded bg-[#f0f2f1]' /></div>
+      </div>)}
+      <span className='sr-only'>Loading messages…</span>
+    </div>
+  );
 
   return (
-    <div className='space-y-5'>
-      {rootMessages.map((msg, index) => {
-        const prevMsg = index > 0 ? rootMessages[index - 1] : null;
-        const isEditing = editingMessageId === msg.message_id;
-
-        return (
-          <React.Fragment key={msg.message_id}>
-            <MessageItem
-              msg={msg}
-              prevMsg={prevMsg}
-              currentUser={currentUser}
-              isEditing={isEditing}
-              editingContent={editingContent}
-              onEdit={onEdit}
-              onSave={(id) => onSave(id, editingContent)}
-              onCancelEdit={onCancelEdit}
-              onDelete={onDelete}
-              onToggleReaction={(emoji) => onToggleReaction(msg.message_id, emoji)}
-              onOpenThread={onOpenThread}
-              onContentChange={onEditingContentChange}
-              quickEmojis={QUICK_EMOJIS}
-            />
-          </React.Fragment>
-        );
-      })}
+    <div className='pb-5'>
+      {searchQuery.trim() ? (
+        <div className='flex items-center gap-2 border-b border-[#e5e7e9] px-4 py-4 text-xs text-[#72777d] sm:px-6' role='status'>
+          <Search className='h-3.5 w-3.5 shrink-0' /><span>{rootMessages.length} {rootMessages.length === 1 ? 'result' : 'results'} for <strong className='break-all font-medium text-[#353b40]'>“{searchQuery}”</strong></span>
+        </div>
+      ) : (
+        <div className='px-4 pb-3 pt-8 sm:px-6'>
+          <div className='mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[#eef3f0] text-[#426955]'><ChannelIcon className='h-6 w-6' strokeWidth={1.7} /></div>
+          <h2 className='text-[23px] font-semibold tracking-[-0.5px] text-[#20252a]'>{isDm ? 'A space to connect' : activeChannel ? activeChannel.name : 'Your workspace'}</h2>
+          <p className='mt-1 max-w-2xl text-[13px] leading-5 text-[#72777d]'>
+            {isDm ? 'This is the beginning of your direct conversation. Share an update, ask a question, or say hello.' : activeChannel?.description || 'A shared space for conversations, ideas, and keeping your team in the loop.'}
+          </p>
+          {activeChannel?.is_private && !isDm && <p className='mt-2 flex items-center gap-1.5 text-[11px] text-[#72777d]'><LockKeyhole className='h-3 w-3' />Only invited members can see this channel.</p>}
+        </div>
+      )}
+      {rootMessages.length === 0 && (
+        <div role='status' className='px-4 py-10 sm:px-6'>
+          <p className='text-sm font-medium text-[#353b40]'>{searchQuery.trim() ? 'No messages found' : 'Start the conversation'}</p>
+          <p className='mt-1 text-[13px] leading-5 text-[#72777d]'>{searchQuery.trim() ? 'Try another keyword or clear your search to see all messages.' : 'Send the first message below. Great teamwork starts with a hello.'}</p>
+        </div>
+      )}
+      {rootMessages.map((message, index) => (
+        <MessageItem key={message.message_id} msg={message} prevMsg={rootMessages[index - 1] ?? null} currentUser={currentUser} isEditing={editingMessageId === message.message_id} editingContent={editingContent}
+          onEdit={onEdit} onSave={(id) => onSave(id, editingContent)} onCancelEdit={onCancelEdit} onDelete={onDelete} onToggleReaction={onToggleReaction} onOpenThread={onOpenThread} onContentChange={onEditingContentChange} quickEmojis={QUICK_EMOJIS} />
+      ))}
       <div ref={messagesEndRef} />
     </div>
   );

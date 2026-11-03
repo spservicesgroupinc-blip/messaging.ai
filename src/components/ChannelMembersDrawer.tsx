@@ -27,14 +27,38 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
   onAddMember,
   onRemoveMember,
 }) => {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   const closeRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 1023px)').matches);
   useEffect(() => {
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     closeRef.current?.focus();
-    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    const mobileMedia = window.matchMedia('(max-width: 1023px)');
+    const onViewportChange = () => {
+      setIsMobile(mobileMedia.matches);
+      if (mobileMedia.matches && !panelRef.current?.contains(document.activeElement)) closeRef.current?.focus();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCloseRef.current();
+      if (event.key !== 'Tab' || !mobileMedia.matches) return;
+      const panel = panelRef.current;
+      const controls = Array.from(panel?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), [tabindex="0"]') || []);
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (!panel?.contains(document.activeElement)) { event.preventDefault(); first?.focus(); }
+      else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    mobileMedia.addEventListener('change', onViewportChange);
     document.addEventListener('keydown', onKeyDown);
-    return () => { document.removeEventListener('keydown', onKeyDown); previousFocus?.focus(); };
-  }, [onClose]);
+    return () => {
+      mobileMedia.removeEventListener('change', onViewportChange);
+      document.removeEventListener('keydown', onKeyDown);
+      previousFocus?.focus();
+    };
+  }, []);
 
   const [inviteEmail, setInviteEmail] = useState('');
   const [error, setError] = useState('');
@@ -73,6 +97,9 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
 
   return (
     <aside
+      ref={panelRef}
+      role={isMobile ? 'dialog' : undefined}
+      aria-modal={isMobile || undefined}
       aria-label="Channel members and access"
       className="fixed inset-0 z-30 flex h-dvh w-full min-w-0 flex-col border-l border-[#e5e7e9] bg-white lg:static lg:h-full lg:w-80 lg:shrink-0"
     >
@@ -115,7 +142,7 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="teammate@company.com"
-                className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-[#20252a] placeholder:text-slate-400 focus:border-[#217a5b] focus:ring-1 focus:ring-[#217a5b]/20 focus:outline-none"
+                className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-[#20252a] placeholder:text-[#72777d] focus:border-[#217a5b] focus:ring-1 focus:ring-[#217a5b]/20 focus:outline-none"
               />
               <Button
                 type="submit"

@@ -29,6 +29,8 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
   currentUserId,
   onCreateChannel,
 }) => {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   const dialogRef = useRef<HTMLDivElement>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -52,7 +54,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
     const focusable = () => Array.from(dialog?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), [tabindex="0"]') || []);
     dialog?.querySelector<HTMLInputElement>('#new-channel-name')?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') { event.preventDefault(); onClose(); }
+      if (event.key === 'Escape') { event.preventDefault(); onCloseRef.current(); }
       if (event.key !== 'Tab') return;
       const controls = focusable();
       const first = controls[0];
@@ -62,7 +64,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
     };
     document.addEventListener('keydown', onKeyDown);
     return () => { document.removeEventListener('keydown', onKeyDown); previousFocus?.focus(); };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -208,7 +210,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. exec-strategy or release-ops"
-                className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pr-3.5 pl-10 text-sm text-[#20252a] placeholder:text-slate-400 focus:border-[#217a5b] focus:ring-1 focus:ring-[#217a5b]/20 focus:outline-none"
+                className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pr-3.5 pl-10 text-sm text-[#20252a] placeholder:text-[#72777d] focus:border-[#217a5b] focus:ring-1 focus:ring-[#217a5b]/20 focus:outline-none"
               />
             </div>
             {slugPreview && (
@@ -236,7 +238,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What is this channel used for?"
-              className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-[#20252a] placeholder:text-slate-400 focus:border-[#217a5b] focus:ring-1 focus:ring-[#217a5b]/20 focus:outline-none"
+              className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-[#20252a] placeholder:text-[#72777d] focus:border-[#217a5b] focus:ring-1 focus:ring-[#217a5b]/20 focus:outline-none"
             />
           </div>
 
@@ -282,7 +284,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
                   value={customEmailInput}
                   onChange={(e) => setCustomEmailInput(e.target.value)}
                   placeholder="Add teammate by email..."
-                  className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-[#20252a] placeholder:text-slate-400 focus:border-[#217a5b] focus:ring-1 focus:ring-[#217a5b]/20 focus:outline-none"
+                  className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-[#20252a] placeholder:text-[#72777d] focus:border-[#217a5b] focus:ring-1 focus:ring-[#217a5b]/20 focus:outline-none"
                 />
                 <Button
                   type="button"

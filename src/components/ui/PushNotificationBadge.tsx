@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from './Button';
-import { Bell, BellOff,  } from 'lucide-react';
+import { Bell, BellOff } from 'lucide-react';
 
-const VAPID_PUBLIC_KEY =
-  process.env.VITE_VAPID_PUBLIC_KEY ||
-  'BGn2x9d4zK3m7pR1vL5qW8yT0oA4sD6fG7hJ8kL1mN2oP3qR4sT5uV6wX7yZ8aB9cD0eF1gH2iJ3kL4mN5oP6qR7sT8uV9wX0yZ1';
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -49,7 +47,7 @@ export const PushNotificationBadge: React.FC<PushNotificationBadgeProps> = ({
   }, []);
 
   const requestPermission = async () => {
-    if (!currentUserId) return;
+    if (!currentUserId || !VAPID_PUBLIC_KEY) return;
     setRequesting(true);
     try {
       if ('serviceWorker' in navigator && 'PushManager' in window) {
@@ -115,6 +113,10 @@ export const PushNotificationBadge: React.FC<PushNotificationBadgeProps> = ({
     typeof window !== 'undefined' &&
     'serviceWorker' in navigator &&
     'PushManager' in window;
+
+  if (!VAPID_PUBLIC_KEY && !subscribed) {
+    return <span className="inline-flex h-8 w-8 items-center justify-center text-current opacity-50" title="Push notifications have not been configured for this workspace" aria-label="Push notifications have not been configured for this workspace"><BellOff className="h-4 w-4" /></span>;
+  }
 
   if (!isSupported) {
     return (

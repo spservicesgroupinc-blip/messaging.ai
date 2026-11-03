@@ -22,14 +22,38 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
   onClose,
   onSendReply,
 }) => {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   const closeRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 1023px)').matches);
   useEffect(() => {
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     closeRef.current?.focus();
-    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    const mobileMedia = window.matchMedia('(max-width: 1023px)');
+    const onViewportChange = () => {
+      setIsMobile(mobileMedia.matches);
+      if (mobileMedia.matches && !panelRef.current?.contains(document.activeElement)) closeRef.current?.focus();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCloseRef.current();
+      if (event.key !== 'Tab' || !mobileMedia.matches) return;
+      const panel = panelRef.current;
+      const controls = Array.from(panel?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), [tabindex="0"]') || []);
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (!panel?.contains(document.activeElement)) { event.preventDefault(); first?.focus(); }
+      else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    mobileMedia.addEventListener('change', onViewportChange);
     document.addEventListener('keydown', onKeyDown);
-    return () => { document.removeEventListener('keydown', onKeyDown); previousFocus?.focus(); };
-  }, [onClose]);
+    return () => {
+      mobileMedia.removeEventListener('change', onViewportChange);
+      document.removeEventListener('keydown', onKeyDown);
+      previousFocus?.focus();
+    };
+  }, []);
 
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
@@ -54,6 +78,9 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
 
   return (
     <aside
+      ref={panelRef}
+      role={isMobile ? 'dialog' : undefined}
+      aria-modal={isMobile || undefined}
       aria-label="Message thread replies"
       className="fixed inset-0 z-30 flex h-dvh w-full min-w-0 flex-col border-l border-[#e5e7e9] bg-white lg:static lg:h-full lg:w-[360px] lg:shrink-0 xl:w-[384px]"
     >
@@ -142,7 +169,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             placeholder="Reply in thread..."
-            className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-[#20252a] placeholder:text-slate-400 focus:border-[#217a5b] focus:ring-1 focus:ring-[#217a5b]/20 focus:outline-none"
+            className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-[#20252a] placeholder:text-[#72777d] focus:border-[#217a5b] focus:ring-1 focus:ring-[#217a5b]/20 focus:outline-none"
           />
           <Button
             type="submit"
