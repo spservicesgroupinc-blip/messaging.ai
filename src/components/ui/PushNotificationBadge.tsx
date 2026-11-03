@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from './Button';
-import { Bell, BellOff, CheckCircle2, XCircle } from 'lucide-react';
+import { Bell, BellOff,  } from 'lucide-react';
 
 const VAPID_PUBLIC_KEY =
   process.env.VITE_VAPID_PUBLIC_KEY ||
@@ -118,35 +118,27 @@ export const PushNotificationBadge: React.FC<PushNotificationBadgeProps> = ({
 
   if (!isSupported) {
     return (
-      <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-        <BellOff className="h-4 w-4" />
-        <span>Push notifications not supported in this browser</span>
-      </div>
+      <span className="inline-flex h-8 w-8 items-center justify-center text-current opacity-50" title="Push notifications are not supported in this browser" aria-label="Push notifications are not supported in this browser"><BellOff className="h-4 w-4" /></span>
     );
   }
 
   if (permission === 'denied') {
     return (
-      <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
-        <XCircle className="h-4 w-4" />
-        <span>Push notifications blocked. Enable in browser settings.</span>
-      </div>
+      <span className="inline-flex h-8 w-8 items-center justify-center text-current opacity-50" title="Notifications are blocked. Enable them in browser settings." aria-label="Notifications are blocked. Enable them in browser settings."><BellOff className="h-4 w-4" /></span>
     );
   }
 
   return (
     <div className="flex items-center gap-2">
       {subscribed ? (
-        <Button variant="secondary" size="sm" onClick={unsubscribe} disabled={requesting}>
+        <Button variant="ghost" size="sm" className="!h-8 !w-8 !p-0 !text-inherit hover:!bg-white/10" aria-label="Turn off push notifications" title="Turn off push notifications" onClick={unsubscribe} disabled={requesting}>
           <Bell className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Push On</span>
+          
         </Button>
       ) : (
-        <Button variant="ghost" size="sm" onClick={requestPermission} disabled={requesting}>
+        <Button variant="ghost" size="sm" className="!h-8 !w-8 !p-0 !text-inherit hover:!bg-white/10" aria-label="Enable push notifications" title="Enable push notifications" onClick={requestPermission} disabled={requesting} loading={requesting}>
           {requesting ? null : <Bell className="h-3.5 w-3.5" />}
-          <span className="hidden sm:inline">
-            {requesting ? 'Subscribing...' : 'Push Off'}
-          </span>
+
         </Button>
       )}
     </div>
