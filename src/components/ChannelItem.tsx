@@ -44,23 +44,28 @@ export const ChannelItem: React.FC<ChannelItemProps> = ({
 
   return (
     <button
-      type= button
+      type='button'
       onClick={handleClick}
       aria-label={channel.name}
-      className={lex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-medium transition-colors }
+      className={
+        'flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-medium transition-colors ' +
+        (isActive
+          ? 'bg-blue-600 text-white'
+          : 'text-slate-300 hover:bg-slate-800/80 hover:text-white')
+      }
     >
       {isDmChannel && dmPartner ? (
-        <Avatar userName={dmPartner.full_name} size=sm isOwn={isDmYou} className=h-5 w-5 text-[10px] shrink-0 />
+        <Avatar userName={dmPartner.full_name} size='sm' isOwn={isDmYou} className='h-5 w-5 text-[10px] shrink-0' />
       ) : (
         <>
           {isPrivate ? (
-            <Lock className=h-3.5 w-3.5 shrink-0 opacity-80 />
+            <Lock className='h-3.5 w-3.5 shrink-0 opacity-80' />
           ) : (
-            <Hash className=h-3.5 w-3.5 shrink-0 opacity-80 />
+            <Hash className='h-3.5 w-3.5 shrink-0 opacity-80' />
           )}
         </>
       )}
-      <span className=truncate>
+      <span className='truncate'>
         {dmPartner ? dmPartner.full_name : channel.name}{isDmYou ? ' (you)' : ''}
       </span>
     </button>

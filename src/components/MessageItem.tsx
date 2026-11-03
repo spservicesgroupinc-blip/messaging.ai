@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check, Edit3, MessageSquare, Trash2, X } from 'lucide-react';
-import { Avatar, DateHeader } from './ui';
+import { Avatar } from './ui/Avatar';
+import { DateHeader } from './ui/DateHeader';
 import {
   formatDateHeader,
   formatTimeShort,
@@ -20,6 +21,7 @@ interface MessageItemProps {
   onDelete: (id: string) => void;
   onToggleReaction: (id: string, emoji: string) => void;
   onOpenThread: (id: string) => void;
+  onContentChange: (value: string) => void;
   quickEmojis: string[];
 }
 
@@ -35,6 +37,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   onDelete,
   onToggleReaction,
   onOpenThread,
+  onContentChange,
   quickEmojis = ['??', '?', '??', '??'],
 }) => {
   const currentDay = formatDateHeader(msg.created_at);
@@ -47,128 +50,128 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     <React.Fragment key={msg.message_id}>
       {showDateHeader && <DateHeader date={msg.created_at} />}
 
-      <article className= group flex items-start gap-3.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-slate-50>
-        <Avatar userName={msg.user_name} size=md className=h-9 w-9 shrink-0 />
+      <article className='group flex items-start gap-3.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-slate-50'>
+        <Avatar userName={msg.user_name} size='md' className='h-9 w-9 shrink-0' />
 
-        <div className=min-w-0 flex-1>
-          {/* Metadata Header (Clean unboxed text with separators) */}
-          <div className=flex flex-wrap items-baseline gap-1.5 text-xs>
-            <span className=font-bold text-slate-900>{msg.user_name}</span>
+        <div className='min-w-0 flex-1'>
+          <div className='flex flex-wrap items-baseline gap-1.5 text-xs'>
+            <span className='font-bold text-slate-900'>{msg.user_name}</span>
             {msg.user_role && (
               <>
-                <span aria-hidden=true className=text-slate-400>
+                <span aria-hidden='true' className='text-slate-400'>
                   &middot;
                 </span>
-                <span className=text-slate-500>{msg.user_role}</span>
+                <span className='text-slate-500'>{msg.user_role}</span>
               </>
             )}
-            <span aria-hidden=true className=text-slate-400>
+            <span aria-hidden='true' className='text-slate-400'>
               &middot;
             </span>
-            <time dateTime={msg.created_at} className=font-mono tabular-nums text-slate-500>
+            <time dateTime={msg.created_at} className='font-mono tabular-nums text-slate-500'>
               {formatTimeShort(msg.created_at)}
             </time>
-            {isEdited && <span className=text-slate-400>(edited)</span>}
+            {isEdited && <span className='text-slate-400'>(edited)</span>}
           </div>
 
-          {/* Message Body or Edit Mode */}
           {isEditing ? (
-            <div className=mt-2 space-y-2>
+            <div className='mt-2 space-y-2'>
               <textarea
                 rows={2}
                 value={editingContent}
-                onChange={(e) => onCancelEdit()}
-                className=w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 focus:border-blue-600 focus:outline-none
+                onChange={(e) => onContentChange(e.target.value)}
+                className='w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 focus:border-blue-600 focus:outline-none'
               />
-              <div className=flex items-center gap-2>
+              <div className='flex items-center gap-2'>
                 <button
-                  type=button
+                  type='button'
                   onClick={() => onSave(msg.message_id)}
-                  className=flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700
+                  className='flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700'
                 >
-                  <Check className=h-3.5 w-3.5 />
+                  <Check className='h-3.5 w-3.5' />
                   Save Changes
                 </button>
                 <button
-                  type=button
+                  type='button'
                   onClick={onCancelEdit}
-                  className=flex items-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50
+                  className='flex items-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50'
                 >
-                  <X className=h-3.5 w-3.5 />
+                  <X className='h-3.5 w-3.5' />
                   Cancel
                 </button>
               </div>
             </div>
           ) : (
-            <p className=mt-1 text-sm leading-relaxed whitespace-pre-wrap text-slate-800>
+            <p className='mt-1 text-sm leading-relaxed whitespace-pre-wrap text-slate-800'>
               {msg.content}
             </p>
           )}
 
-          {/* Reactions & Thread Reply Controls */}
-          <div className=mt-2 flex flex-wrap items-center gap-2>
+          <div className='mt-2 flex flex-wrap items-center gap-2'>
             {Object.entries(msg.reactions || {}).map(([emoji, userIds]) => {
               const hasReacted = userIds.includes(currentUser?.user_id ?? '');
               return (
                 <button
                   key={emoji}
-                  type=button
+                  type='button'
                   onClick={() => onToggleReaction(msg.message_id, emoji)}
-                  className={lex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition-colors tabular-nums }
+                  className={
+                    'flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition-colors tabular-nums ' +
+                    (hasReacted
+                      ? 'border-blue-300 bg-blue-50 text-blue-800'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100')
+                  }
                 >
                   <span>{emoji}</span>
-                  <span className=font-mono>{userIds.length}</span>
+                  <span className='font-mono'>{userIds.length}</span>
                 </button>
               );
             })}
 
             <button
-              type=button
+              type='button'
               onClick={() => onOpenThread(msg.message_id)}
-              aria-label={Reply in thread to }
-              className=flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50 tabular-nums
+              aria-label={'Reply in thread to   + msg.content.slice(0, 24) +  '}
+              className='flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50 tabular-nums'
             >
-              <MessageSquare className=h-3.5 w-3.5 />
+              <MessageSquare className='h-3.5 w-3.5' />
               <span>
                 {msg.reply_count > 0
-                  ? ${msg.reply_count} 
+                  ? msg.reply_count + ' ' + (msg.reply_count === 1 ? 'reply' : 'replies')
                   : 'Reply in thread'}
               </span>
             </button>
 
-            {/* Quick emoji bar */}
-            <div className=flex items-center gap-1 opacity-80 transition-opacity group-hover:opacity-100>
+            <div className='flex items-center gap-1 opacity-80 transition-opacity group-hover:opacity-100'>
               {quickEmojis.map((emoji) => (
                 <button
                   key={emoji}
-                  type=button
+                  type='button'
                   onClick={() => onToggleReaction(msg.message_id, emoji)}
-                  aria-label={React with }
-                  className=rounded px-1.5 py-0.5 text-xs hover:bg-slate-200/70
+                  aria-label={'React with ' + emoji}
+                  className='rounded px-1.5 py-0.5 text-xs hover:bg-slate-200/70'
                 >
                   {emoji}
                 </button>
               ))}
             </div>
 
-            {/* Author Edit/Delete actions */}
             {isOwn && !isEditing && (
-              <div className=flex items-center gap-1>
+              <div className='flex items-center gap-1'>
                 <button
-                  type=button
+                  type='button'
                   onClick={() => onEdit(msg.message_id)}
-                  aria-label={Edit message }
-                  className=rounded p-1 text-slate-400 hover:bg-slate-200/70 hover:text-slate-700
+                  aria-label={'Edit message   + msg.content.slice(0, 20) +  '}
+                  className='rounded p-1 text-slate-400 hover:bg-slate-200/70 hover:text-slate-700'
                 >
-                  <Edit3 className=h-3.5 w-3.5 />
+                  <Edit3 className='h-3.5 w-3.5' />
                 </button>
                 <button
-                  type=button
+                  type='button'
                   onClick={() => onDelete(msg.message_id)}
-                  aria-label={Delete message }
-                  className=rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600
+                  aria-label={'Delete message   + msg.content.slice(0, 20) +  '}
+                  className='rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600'
                 >
-                  <Trash2 className=h-3.5 w-3.5 />
+                  <Trash2 className='h-3.5 w-3.5' />
                 </button>
               </div>
             )}
