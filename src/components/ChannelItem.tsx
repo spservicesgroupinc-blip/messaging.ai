@@ -14,60 +14,40 @@ interface ChannelItemProps {
 }
 
 export const ChannelItem: React.FC<ChannelItemProps> = ({
-  channel,
-  isActive,
-  isDm = false,
-  currentUser,
-  workspaceUsers = [],
-  onClick,
-  onOpenDm,
+  channel, isActive, currentUser, workspaceUsers = [], onClick, onOpenDm,
 }) => {
   const isDmChannel = Boolean(channel.dm_participants);
-  const isPrivate = channel.is_private && !isDmChannel;
-
   let dmPartner: PublicUser | undefined;
   let isDmYou = false;
-  if (isDmChannel && currentUser && channel.dm_participants) {
-    const ids = channel.dm_participants.split(',').map((s) => s.trim()).filter(Boolean);
+  if (isDmChannel && currentUser) {
+    const ids = channel.dm_participants!.split(',').map((id) => id.trim()).filter(Boolean);
     const partnerId = ids.find((id) => id !== currentUser.user_id) || currentUser.user_id;
-    dmPartner = workspaceUsers.find((u) => u.user_id === partnerId);
+    dmPartner = workspaceUsers.find((user) => user.user_id === partnerId);
     isDmYou = partnerId === currentUser.user_id;
   }
-
-  const handleClick = () => {
-    if (isDmChannel && dmPartner && onOpenDm) {
-      onOpenDm(dmPartner.user_id);
-    } else {
-      onClick(channel.channel_id);
-    }
-  };
 
   return (
     <button
       type='button'
-      onClick={handleClick}
-      aria-label={channel.name}
-      className={
-        'flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-medium transition-colors ' +
+      onClick={() => isDmChannel && dmPartner && onOpenDm
+        ? onOpenDm(dmPartner.user_id) : onClick(channel.channel_id)}
+      aria-label={dmPartner ? dmPartner.full_name : channel.name}
+      aria-current={isActive ? 'page' : undefined}
+      className={'group flex min-h-8 w-full items-center gap-2.5 rounded-md px-2.5 py-1 text-left text-sm transition-colors ' +
         (isActive
-          ? 'bg-blue-600 text-white'
-          : 'text-slate-300 hover:bg-slate-800/80 hover:text-white')
-      }
+          ? 'bg-[#e3eee8] font-semibold text-[#1c6349]'
+          : 'font-normal text-[#5a625f] hover:bg-[#e9ece9] hover:text-[#252c29]')}
     >
       {isDmChannel && dmPartner ? (
-        <Avatar userName={dmPartner.full_name} size='sm' isOwn={isDmYou} className='h-5 w-5 text-[10px] shrink-0' />
+        <Avatar userName={dmPartner.full_name} size='sm' className='!h-5 !w-5 shrink-0 !rounded-md !text-[9px]' />
+      ) : channel.is_private ? (
+        <Lock aria-hidden='true' className='h-4 w-4 shrink-0 opacity-70' strokeWidth={1.75} />
       ) : (
-        <>
-          {isPrivate ? (
-            <Lock className='h-3.5 w-3.5 shrink-0 opacity-80' />
-          ) : (
-            <Hash className='h-3.5 w-3.5 shrink-0 opacity-80' />
-          )}
-        </>
+        <Hash aria-hidden='true' className='h-4 w-4 shrink-0 opacity-65' strokeWidth={1.75} />
       )}
-      <span className='truncate'>
-        {dmPartner ? dmPartner.full_name : channel.name}{isDmYou ? ' (you)' : ''}
-      </span>
+      <span className='truncate'>{dmPartner ? dmPartner.full_name : channel.name}</span>
+      {isDmYou && <span className='text-xs font-normal text-[#59665e]'>you</span>}
     </button>
   );
 };
+
