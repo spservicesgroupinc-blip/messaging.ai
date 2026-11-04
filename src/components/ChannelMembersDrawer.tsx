@@ -1,3 +1,6 @@
+import { useModal } from '../hooks/useModal';
+import { useMobile } from '../hooks/useDeviceState';
+import type { ActionResult } from '../hooks/useWorkspace';
 import React, { useEffect, useRef, useState } from 'react';
 import { Lock, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import { Avatar } from './ui/Avatar';
@@ -15,7 +18,7 @@ interface ChannelMembersDrawerProps {
   currentUserId: string;
   onClose: () => void;
   onAddMember: (email: string) => Promise<{ ok: boolean; error?: string }>;
-  onRemoveMember: (targetUserId: string) => Promise<void>;
+  onRemoveMember: (targetUserId: string) => Promise<ActionResult>;
 }
 
 export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
@@ -27,39 +30,10 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
   onAddMember,
   onRemoveMember,
 }) => {
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
   const closeRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement>(null);
-  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 1023px)').matches);
-  useEffect(() => {
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    closeRef.current?.focus();
-    const mobileMedia = window.matchMedia('(max-width: 1023px)');
-    const onViewportChange = () => {
-      setIsMobile(mobileMedia.matches);
-      if (mobileMedia.matches && !panelRef.current?.contains(document.activeElement)) closeRef.current?.focus();
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onCloseRef.current();
-      if (event.key !== 'Tab' || !mobileMedia.matches) return;
-      const panel = panelRef.current;
-      const controls = Array.from(panel?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), [tabindex="0"]') || []);
-      const first = controls[0];
-      const last = controls[controls.length - 1];
-      if (!panel?.contains(document.activeElement)) { event.preventDefault(); first?.focus(); }
-      else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
-    };
-    mobileMedia.addEventListener('change', onViewportChange);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      mobileMedia.removeEventListener('change', onViewportChange);
-      document.removeEventListener('keydown', onKeyDown);
-      previousFocus?.focus();
-    };
-  }, []);
-
+  const isMobile = useMobile();
+  useModal(panelRef, isMobile, onClose);
   const [inviteEmail, setInviteEmail] = useState('');
   const [error, setError] = useState('');
   const [adding, setAdding] = useState(false);
@@ -95,9 +69,16 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
     }
   };
 
+  const changeMember = async (operation: () => Promise<ActionResult>) => {
+    setAdding(true); setError('');
+    try { const result = await operation(); if (!result.ok) setError(result.error || 'Unable to update members.'); }
+    catch { setError('Unable to update members. Please try again.'); }
+    finally { setAdding(false); }
+  };
   return (
     <aside
       ref={panelRef}
+      tabIndex={-1}
       role={isMobile ? 'dialog' : undefined}
       aria-modal={isMobile || undefined}
       aria-label="Channel members and access"
@@ -106,7 +87,7 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-[#e5e7e9] px-5">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 shrink-0 text-slate-600" />
-          <h2 className="text-sm font-semibold text-[#20252a]">Channel members</h2>
+          <h2 className="text-sm font-semibold text-slate-900">Channel members</h2>
         </div>
         <button
           type="button"
@@ -121,7 +102,7 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
 
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
         <div className="rounded-lg border border-[#e5e7e9] bg-[#f7f8f8] p-4">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-[#20252a]">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-900">
             {channel.is_private && <Lock className="h-3.5 w-3.5 shrink-0 text-slate-700" />}
             <span>{channel.is_private ? 'Private channel' : 'Public channel'}</span>
           </div>
@@ -158,7 +139,7 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
 
             {nonMembers.length > 0 && (
               <div className="space-y-1 pt-1">
-                <p className="text-xs text-[#72777d]">Quick add registered teammates:</p>
+                <p className="text-xs text-slate-600">Quick add registered teammates:</p>
                 {nonMembers.map((u) => (
                   <div
                     key={u.user_id}
@@ -167,15 +148,15 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
                     <div className="flex items-center gap-2 truncate pr-2">
                       <Avatar userName={u.full_name} size="sm" className="h-6 w-6" />
                       <div className="min-w-0">
-                        <span className="font-medium text-[#20252a] block">{u.full_name}</span>
-                        <span className="block truncate text-[#72777d] text-[11px]">{u.email}</span>
+                        <span className="font-medium text-slate-900 block">{u.full_name}</span>
+                        <span className="block truncate text-slate-600 text-[11px]">{u.email}</span>
                       </div>
                     </div>
                     <Button
                       type="button"
                       variant="secondary"
                       size="sm"
-                      onClick={() => onAddMember(u.email)}
+                      disabled={adding} onClick={() => void changeMember(() => onAddMember(u.email))}
                     >
                       Add
                     </Button>
@@ -195,7 +176,7 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
         <div className="space-y-2.5">
           <div className="flex items-center justify-between text-xs font-semibold text-slate-800">
             <span>Members</span>
-            <span className="tabular-nums text-[#72777d]">{members.length}</span>
+            <span className="tabular-nums text-slate-600">{members.length}</span>
           </div>
 
           <div className="divide-y divide-slate-100 rounded-lg border border-[#e5e7e9]">
@@ -209,11 +190,11 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
                   <div className="flex min-w-0 items-center gap-3">
                     <Avatar userName={member.full_name} size="md" className="h-8 w-8 shrink-0" />
                     <div className="min-w-0">
-                      <div className="truncate text-xs font-semibold text-[#20252a]">
+                      <div className="truncate text-xs font-semibold text-slate-900">
                         {member.full_name}
                         {member.user_id === currentUserId ? ' (you)' : ''}
                       </div>
-                      <div className="truncate text-[11px] text-[#72777d]">
+                      <div className="truncate text-[11px] text-slate-600">
                         {member.role_title} &middot; {isCreator ? 'Owner' : 'Member'}
                       </div>
                     </div>
@@ -227,7 +208,7 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
                         type="button"
                         variant="danger"
                         size="sm"
-                        onClick={() => onRemoveMember(member.user_id)}
+                        disabled={adding} onClick={() => void changeMember(() => onRemoveMember(member.user_id))}
                         aria-label={`Remove ${member.full_name} from channel`}
                       >
                         <UserMinus className="h-3.5 w-3.5 shrink-0" />

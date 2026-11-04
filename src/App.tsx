@@ -1,679 +1,115 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { AuthView } from './components/AuthView';
 import { ChannelMembersDrawer } from './components/ChannelMembersDrawer';
 import { CreateChannelModal } from './components/CreateChannelModal';
 import { EditChannelModal } from './components/EditChannelModal';
 import { ThreadDrawer } from './components/ThreadDrawer';
-import { ChannelItem } from './components/ChannelItem';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
-import { MessageItem } from './components/MessageItem';
-import { MessageList } from './components/MessageList';
-import { Composer } from './components/Composer';
-import { OfflineIndicator } from './components/OfflineIndicator';
+import { Conversation } from './components/Conversation';
+import { MobileDirectory, MobileTabBar } from './components/MobileNavigation';
 import { WorkspaceShell } from './components/WorkspaceShell';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import {
-  callSheetsBackend,
-  getSavedActiveChannelId,
-  getSavedSessionUser,
-  saveActiveChannelId,
-  saveSessionUser,
-} from './services/gasClient';
-import {
-  type EnrichedMessage,
-  type GasResponse,
-  type PublicUser,
-  type SheetChannel,
-  type SheetChannelMember,
-} from './utils/sheetsProtocol';
+import { useWorkspace } from './hooks/useWorkspace';
+import { useKeyboardVisible, useMobile, useOnline } from './hooks/useDeviceState';
+import { useMobileNavigation } from './hooks/useMobileNavigation';
+import { useAnyModal } from './hooks/useModal';
+import type { SheetChannel } from './utils/sheetsProtocol';
 
-const QUICK_EMOJIS = ['👍', '✅', '🚀', '🎯'];
-
+type Overlay = { kind: 'members' } | { kind: 'thread'; id: string } | { kind: 'create'; isPrivate: boolean } | { kind: 'edit' | 'delete'; channel: SheetChannel } | null;
 function AppContent() {
-  const [currentUser, setCurrentUser] = useState<PublicUser | null>(() =>
-    getSavedSessionUser()
-  );
-  const [workspaceUsers, setWorkspaceUsers] = useState<PublicUser[]>([]);
-  const [channels, setChannels] = useState<SheetChannel[]>([]);
-  const [memberships, setMemberships] = useState<SheetChannelMember[]>([]);
-  const [activeChannelId, setActiveChannelId] = useState<string>(() =>
-    getSavedActiveChannelId()
-  );
-  const [messages, setMessages] = useState<EnrichedMessage[]>([]);
-  const [loadingWorkspace, setLoadingWorkspace] = useState<boolean>(Boolean(getSavedSessionUser()));
-  const [loadingChannel, setLoadingChannel] = useState<boolean>(false);
-  const [syncing, setSyncing] = useState<boolean>(false);
-
-  const [composerText, setComposerText] = useState('');
-  const [sendingMessage, setSendingMessage] = useState(false);
-  const [composerError, setComposerError] = useState('');
-
-  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-  const [editingContent, setEditingContent] = useState('');
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isCreateChannelOpen, setIsCreateChannelOpen] = useState(false);
-  const [createChannelDefaultPrivate, setCreateChannelDefaultPrivate] = useState(false);
-  const [channelModalTarget, setChannelModalTarget] = useState<{
-    channel: SheetChannel;
-    mode: 'edit' | 'delete';
-  } | null>(null);
-  const [isMembersDrawerOpen, setIsMembersDrawerOpen] = useState(false);
-  const [activeThreadMessageId, setActiveThreadMessageId] = useState<string | null>(null);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const activeChannelIdRef = useRef(activeChannelId);
-  activeChannelIdRef.current = activeChannelId;
-
-  const currentUserRef = useRef(currentUser);
-  currentUserRef.current = currentUser;
-
-  const syncWorkspace = useCallback(
-    async (userId: string, explicitChannelId?: string, silent = false) => {
-      if (!silent) setSyncing(true);
-      const channelAtStart = explicitChannelId || activeChannelIdRef.current;
-      try {
-        const res = await callSheetsBackend({
-          action: 'getBootstrap',
-          userId,
-          channelId: channelAtStart,
-        });
-
-        if (!res.ok || !res.user) {
-          saveSessionUser(null);
-          setCurrentUser(null);
-          return;
-        }
-
-        setCurrentUser(res.user);
-        saveSessionUser(res.user);
-        setWorkspaceUsers(res.users || []);
-        const nextChannels = res.channels || [];
-        setChannels(nextChannels);
-        setMemberships(res.memberships || []);
-
-        const currentActiveNow = explicitChannelId || activeChannelIdRef.current;
-        const resolvedChannelId =
-          currentActiveNow &&
-          nextChannels.some((c) => c.channel_id === currentActiveNow)
-            ? currentActiveNow
-            : nextChannels[0]?.channel_id || '';
-
-        if (resolvedChannelId !== activeChannelIdRef.current) {
-          activeChannelIdRef.current = resolvedChannelId;
-          setActiveChannelId(resolvedChannelId);
-          saveActiveChannelId(resolvedChannelId);
-        }
-
-        if (
-          res.messages &&
-          (!channelAtStart || channelAtStart === activeChannelIdRef.current)
-        ) {
-          setMessages(res.messages);
-        }
-      } catch (err) {
-        console.error('Workspace sync error:', err);
-      } finally {
-        setLoadingWorkspace(false);
-        if (!silent) setSyncing(false);
-      }
-    },
-    []
-  );
-
-  useEffect(() => {
-    const saved = getSavedSessionUser();
-    if (saved) {
-      void syncWorkspace(saved.user_id, getSavedActiveChannelId());
-    } else {
-      setLoadingWorkspace(false);
-    }
-  }, [syncWorkspace]);
-
-  useEffect(() => {
-    if (!currentUser) return;
-
-    const eventSource = new EventSource('/api/events');
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type && data.type !== 'connected' && currentUserRef.current) {
-          void syncWorkspace(currentUserRef.current.user_id, undefined, true);
-        }
-      } catch {
-        // ignore parse errors
-      }
-    };
-
-    const interval = window.setInterval(() => {
-      if (currentUserRef.current) {
-        void syncWorkspace(currentUserRef.current.user_id, undefined, true);
-      }
-    }, 5000);
-
-    return () => {
-      eventSource.close();
-      window.clearInterval(interval);
-    };
-  }, [currentUser, syncWorkspace]);
-
-  const handleSelectChannel = async (channelId: string) => {
-    if (!currentUser) return;
-    activeChannelIdRef.current = channelId;
-    setActiveChannelId(channelId);
-    saveActiveChannelId(channelId);
-    setActiveThreadMessageId(null);
-    setMobileSidebarOpen(false);
-    setLoadingChannel(true);
-    try {
-      const res = await callSheetsBackend({
-        action: 'getMessages',
-        userId: currentUser.user_id,
-        channelId,
-      });
-      if (res.ok && res.messages) {
-        setMessages(res.messages);
-      }
-    } finally {
-      setLoadingChannel(false);
-    }
+  const w = useWorkspace();
+  const mobile = useMobile();
+  const online = useOnline();
+  const keyboard = useKeyboardVisible();
+  const anyModal = useAnyModal();
+  const [overlay, setOverlay] = useState<Overlay>(null);
+  const [query, setQuery] = useState('');
+  const closeOverlay = useCallback(() => setOverlay(null), []);
+  const onHistoryConversation = useCallback((id: string) => { void w.select(id); setQuery(''); }, [w.select]);
+  const nav = useMobileNavigation(onHistoryConversation, closeOverlay);
+  const active = w.channels.find(channel => channel.channel_id === w.activeId);
+  const publicChannels = w.channels.filter(channel => !channel.is_private && !channel.dm_participants);
+  const privateChannels = w.channels.filter(channel => channel.is_private && !channel.dm_participants);
+  const dmChannels = w.channels.filter(channel => Boolean(channel.dm_participants));
+  useEffect(() => { if (!w.user) { closeOverlay(); } }, [w.user?.user_id, closeOverlay]);
+  const displayName = (channel?: SheetChannel) => {
+    if (!channel) return 'Conversation';
+    if (!channel.dm_participants) return channel.name;
+    const partnerId = channel.dm_participants.split(',').find(id => id !== w.user?.user_id) ?? w.user?.user_id;
+    const partner = w.users.find(user => user.user_id === partnerId);
+    return partnerId === w.user?.user_id ? 'Saved messages' : partner?.full_name ?? 'Direct message';
   };
-
-  const handleAuthenticated = (res: GasResponse) => {
-    if (!res.user) return;
-    setCurrentUser(res.user);
-    saveSessionUser(res.user);
-    setWorkspaceUsers(res.users || []);
-    const nextChannels = res.channels || [];
-    setChannels(nextChannels);
-    setMemberships(res.memberships || []);
-    const firstChannelId = nextChannels[0]?.channel_id || '';
-    activeChannelIdRef.current = firstChannelId;
-    setActiveChannelId(firstChannelId);
-    saveActiveChannelId(firstChannelId);
-    if (firstChannelId) {
-      void syncWorkspace(res.user.user_id, firstChannelId);
+  const showOverlay = (next: Exclude<Overlay, null>) => {
+    if (mobile && !history.state?.relayOverlay) history.pushState({ ...history.state, relayOverlay: true }, '');
+    setOverlay(next);
+  };
+  const dismissOverlay = () => {
+    closeOverlay();
+    if (mobile && history.state?.relayOverlay) history.back();
+  };
+  const choose = (channel: SheetChannel) => {
+    closeOverlay(); setQuery(''); void w.select(channel.channel_id);
+    if (mobile) nav.open(channel.channel_id, channel.dm_participants ? 'dms' : 'channels');
+  };
+  const openPerson = async (id: string) => {
+    const result = await w.act({ action: 'openDirectMessage', channelId: '', targetUserId: id });
+    if (result.ok && result.channel) {
+      w.setActive(result.channel.channel_id); setQuery(''); closeOverlay();
+      if (mobile) nav.open(result.channel.channel_id, 'dms');
+    } else w.setError(result.error ?? 'Unable to open a direct message.');
+  };
+  const signOut = () => { closeOverlay(); nav.reset(); setQuery(''); w.signOut(); };
+  const create = async (params: { name: string; description: string; isPrivate: boolean; memberEmails: string[] }) => {
+    const result = await w.act({ action: 'createChannel', ...params });
+    if (result.ok && result.channel) {
+      w.setActive(result.channel.channel_id); setQuery('');
+      if (mobile) nav.open(result.channel.channel_id, 'channels');
     }
+    return result;
   };
-
-  const handleSignOut = () => {
-    saveSessionUser(null);
-    setCurrentUser(null);
-    setMessages([]);
-    setActiveThreadMessageId(null);
-    setIsMembersDrawerOpen(false);
-  };
-
-  const handleSendMessage = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!currentUser || !activeChannelId) return;
-    const content = composerText.trim();
-    if (!content || sendingMessage) return;
-
-    setComposerError('');
-    setSendingMessage(true);
-    try {
-      const res = await callSheetsBackend({
-        action: 'sendMessage',
-        userId: currentUser.user_id,
-        channelId: activeChannelId,
-        content,
-      });
-
-      if (!res.ok) {
-        setComposerError(res.error || 'Failed to send message.');
-        return;
-      }
-
-      setComposerText('');
-      if (res.messages) {
-        setMessages(res.messages);
-      }
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 40);
-    } finally {
-      setSendingMessage(false);
+  const remove = async (channelId: string) => {
+    const result = await w.act({ action: 'deleteChannel', channelId });
+    if (result.ok && w.activeId === channelId) {
+      const fallback = result.channels?.[0];
+      if (fallback) choose(fallback); else { w.setActive(''); if (mobile) nav.showTab('channels'); }
     }
+    return result;
   };
+  const membershipIds = new Set(w.memberships.filter(member => member.channel_id === active?.channel_id).map(member => member.user_id));
+  if (active?.created_by && active.created_by !== 'system') membershipIds.add(active.created_by);
+  const memberCount = active?.is_private ? membershipIds.size : w.users.length;
+  const root = overlay?.kind === 'thread' ? w.messages.find(message => message.message_id === overlay.id) : null;
+  const showConversation = !mobile || Boolean(nav.conversation);
 
-  const handleSendThreadReply = async (content: string, parentMessageId: string) => {
-    if (!currentUser || !activeChannelId) return;
-    const res = await callSheetsBackend({
-      action: 'sendMessage',
-      userId: currentUser.user_id,
-      channelId: activeChannelId,
-      parentMessageId,
-      content,
-    });
-    if (res.ok && res.messages) {
-      setMessages(res.messages);
-    }
-  };
-
-  const handleSaveEditedMessage = async (messageId: string, nextContent?: string) => {
-    const finalContent = (nextContent ?? editingContent).trim();
-    if (!currentUser || !finalContent) return;
-    const res = await callSheetsBackend({
-      action: 'editMessage',
-      userId: currentUser.user_id,
-      messageId,
-      content: finalContent,
-    });
-    if (res.ok && res.messages) {
-      setMessages(res.messages);
-      setEditingMessageId(null);
-      setEditingContent('');
-    }
-  };
-
-  const handleDeleteMessage = async (messageId: string) => {
-    if (!currentUser) return;
-    const res = await callSheetsBackend({
-      action: 'deleteMessage',
-      userId: currentUser.user_id,
-      messageId,
-    });
-    if (res.ok && res.messages) {
-      setMessages(res.messages);
-      if (activeThreadMessageId === messageId) {
-        setActiveThreadMessageId(null);
-      }
-    }
-  };
-
-  const handleToggleReaction = async (messageId: string, emoji: string) => {
-    if (!currentUser) return;
-    const res = await callSheetsBackend({
-      action: 'toggleReaction',
-      userId: currentUser.user_id,
-      messageId,
-      emoji,
-    });
-    if (res.ok && res.messages) {
-      setMessages(res.messages);
-    }
-  };
-
-  const handleCreateChannel = async (params: {
-    name: string;
-    description: string;
-    isPrivate: boolean;
-    memberEmails: string[];
-  }) => {
-    if (!currentUser) return { ok: false, error: 'Not signed in' };
-    const res = await callSheetsBackend({
-      action: 'createChannel',
-      userId: currentUser.user_id,
-      name: params.name,
-      description: params.description,
-      isPrivate: params.isPrivate,
-      memberEmails: params.memberEmails,
-    });
-
-    if (res.ok && res.channel) {
-      activeChannelIdRef.current = res.channel.channel_id;
-      setActiveChannelId(res.channel.channel_id);
-      saveActiveChannelId(res.channel.channel_id);
-      if (res.channels) setChannels(res.channels);
-      if (res.memberships) setMemberships(res.memberships);
-      setMessages([]);
-      return { ok: true };
-    }
-    return { ok: false, error: res.error };
-  };
-
-  const handleEditChannel = async (params: {
-    channelId: string;
-    name: string;
-    description: string;
-    isPrivate: boolean;
-  }) => {
-    if (!currentUser) return { ok: false, error: 'Not signed in' };
-    const res = await callSheetsBackend({
-      action: 'editChannel',
-      userId: currentUser.user_id,
-      channelId: params.channelId,
-      name: params.name,
-      description: params.description,
-      isPrivate: params.isPrivate,
-    });
-
-    if (res.ok) {
-      if (res.channels) {
-        setChannels(res.channels);
-      } else if (res.channel) {
-        setChannels((prev) =>
-          prev.map((c) => (c.channel_id === res.channel!.channel_id ? res.channel! : c))
-        );
-      }
-      if (res.memberships) setMemberships(res.memberships);
-      return { ok: true };
-    }
-    return { ok: false, error: res.error };
-  };
-
-  const handleDeleteChannel = async (channelId: string) => {
-    if (!currentUser) return { ok: false, error: 'Not signed in' };
-    const res = await callSheetsBackend({
-      action: 'deleteChannel',
-      userId: currentUser.user_id,
-      channelId,
-    });
-
-    if (res.ok) {
-      const nextChannels = res.channels || channels.filter((c) => c.channel_id !== channelId);
-      setChannels(nextChannels);
-      if (res.memberships) setMemberships(res.memberships);
-
-      if (activeChannelIdRef.current === channelId) {
-        const fallbackChannel =
-          nextChannels.find((c) => !c.dm_participants) || nextChannels[0];
-        const nextActiveId = fallbackChannel?.channel_id || '';
-        activeChannelIdRef.current = nextActiveId;
-        setActiveChannelId(nextActiveId);
-        saveActiveChannelId(nextActiveId);
-        if (nextActiveId) {
-          void handleSelectChannel(nextActiveId);
-        } else {
-          setMessages([]);
-        }
-      }
-      return { ok: true };
-    }
-    return { ok: false, error: res.error };
-  };
-
-  const handleOpenDirectMessage = async (targetUserId: string) => {
-    if (!currentUser) return;
-    setMobileSidebarOpen(false);
-    const res = await callSheetsBackend({
-      action: 'openDirectMessage',
-      userId: currentUser.user_id,
-      targetUserId,
-    });
-    if (res.ok && res.channel) {
-      activeChannelIdRef.current = res.channel.channel_id;
-      setActiveChannelId(res.channel.channel_id);
-      saveActiveChannelId(res.channel.channel_id);
-      if (res.channels) setChannels(res.channels);
-      if (res.memberships) setMemberships(res.memberships);
-      setMessages(res.messages || []);
-    }
-  };
-
-  const handleAddMemberToActiveChannel = async (email: string) => {
-    if (!currentUser || !activeChannelId) return { ok: false, error: 'Invalid state' };
-    const res = await callSheetsBackend({
-      action: 'addChannelMember',
-      userId: currentUser.user_id,
-      channelId: activeChannelId,
-      email,
-    });
-    if (res.ok) {
-      if (res.memberships) setMemberships(res.memberships);
-      if (res.channels) setChannels(res.channels);
-      return { ok: true };
-    }
-    return { ok: false, error: res.error };
-  };
-
-  const handleRemoveMemberFromActiveChannel = async (targetUserId: string) => {
-    if (!currentUser || !activeChannelId) return;
-    const res = await callSheetsBackend({
-      action: 'removeChannelMember',
-      userId: currentUser.user_id,
-      channelId: activeChannelId,
-      targetUserId,
-    });
-    if (res.ok) {
-      if (res.memberships) setMemberships(res.memberships);
-      if (res.channels) setChannels(res.channels);
-    }
-  };
-
-  const insertFormatSnippet = (prefix: string, suffix = prefix) => {
-    setComposerText((prev) => prev + prefix + 'text' + suffix);
-  };
-
-  const publicChannels = useMemo(
-    () => channels.filter((c) => !c.is_private && !c.dm_participants),
-    [channels]
-  );
-
-  const privateChannels = useMemo(
-    () => channels.filter((c) => c.is_private && !c.dm_participants),
-    [channels]
-  );
-
-  const activeChannel = useMemo(
-    () => channels.find((c) => c.channel_id === activeChannelId) || channels[0],
-    [channels, activeChannelId]
-  );
-
-  const getChannelDisplayName = (channel?: SheetChannel): string => {
-    if (!channel) return 'general';
-    if (channel.dm_participants && currentUser) {
-      const ids = channel.dm_participants.split(',').map((s) => s.trim());
-      const partnerId = ids.find((id) => id !== currentUser.user_id) || currentUser.user_id;
-      const partner = workspaceUsers.find((u) => u.user_id === partnerId);
-      return partner ? partner.full_name : 'Direct Message';
-    }
-    return channel.name;
-  };
-
-  const activeChannelMemberCount = useMemo(() => {
-    if (!activeChannel) return 0;
-    if (!activeChannel.is_private) return workspaceUsers.length;
-    const ids = new Set(
-      memberships
-        .filter((m) => m.channel_id === activeChannel.channel_id)
-        .map((m) => m.user_id)
-    );
-    if (activeChannel.created_by && activeChannel.created_by !== 'system') {
-      ids.add(activeChannel.created_by);
-    }
-    return ids.size;
-  }, [activeChannel, memberships, workspaceUsers]);
-
-  const activeThreadRootMessage = useMemo(
-    () =>
-      activeThreadMessageId
-        ? messages.find((m) => m.message_id === activeThreadMessageId) || null
-        : null,
-    [messages, activeThreadMessageId]
-  );
-
-  const rootMessages = useMemo(() => {
-    const roots = messages.filter((m) => !m.parent_message_id);
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return roots;
-    return roots.filter(
-      (m) =>
-        m.content.toLowerCase().includes(q) ||
-        m.user_name.toLowerCase().includes(q)
-    );
-  }, [messages, searchQuery]);
-
-  if (loadingWorkspace) {
-    return (
-      <div className='flex min-h-dvh items-center justify-center bg-slate-50 text-slate-600'>
-        <div className='flex items-center gap-3 text-sm font-medium'>
-          <RefreshCw className='h-4 w-4 animate-spin text-blue-600' />
-          <span>Loading Relay Workspace...</span>
+  if (w.loading) return <div role="status" className="flex min-h-dvh items-center justify-center gap-3 bg-slate-50 text-slate-600"><RefreshCw className="animate-spin" size={18} />Loading Relay Workspace…</div>;
+  if (!w.user) return <AuthView onAuthenticated={w.authenticate} />;
+  return <WorkspaceShell currentUser={w.user} isDirectMessage={Boolean(active?.dm_participants)}
+    onHome={() => { if (publicChannels[0]) choose(publicChannels[0]); }}
+    onDirectMessages={() => { if (dmChannels[0]) choose(dmChannels[0]); else if (w.users.find(user => user.user_id !== w.user!.user_id)) void openPerson(w.users.find(user => user.user_id !== w.user!.user_id)!.user_id); }}
+    onMembers={() => showOverlay({ kind: 'members' })} onCreateChannel={() => showOverlay({ kind: 'create', isPrivate: false })}>
+    <Sidebar currentUser={w.user} workspaceUsers={w.users} publicChannels={publicChannels} privateChannels={privateChannels} directMessageChannels={dmChannels} activeChannelId={w.activeId} mobileSidebarOpen={false}
+      onSelectChannel={id => { const channel = w.channels.find(item => item.channel_id === id); if (channel) choose(channel); }} onOpenDirectMessage={id => void openPerson(id)}
+      onCreateChannel={isPrivate => showOverlay({ kind: 'create', isPrivate })} onEditChannel={channel => showOverlay({ kind: 'edit', channel })} onDeleteChannel={channel => showOverlay({ kind: 'delete', channel })}
+      onManageChannelMembers={channel => { choose(channel); showOverlay({ kind: 'members' }); }} onSignOut={signOut} onToggleMobileSidebar={() => {}} />
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {(!online || w.error) && <div role={w.error ? 'alert' : 'status'} className="flex shrink-0 items-center justify-between gap-2 border-b border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950"><span>{!online ? 'Offline — your drafts stay on this device.' : w.error}</span>{online && <button onClick={() => void w.refresh()} className="touch-target shrink-0 rounded px-2 font-semibold">Retry</button>}</div>}
+      {mobile && !showConversation ? <MobileDirectory key={nav.tab} tab={nav.tab} user={w.user} users={w.users} channels={w.channels} onSelect={choose} onPerson={id => void openPerson(id)} onCreate={isPrivate => showOverlay({ kind: 'create', isPrivate })}
+        onEdit={channel => showOverlay({ kind: 'edit', channel })} onDelete={channel => showOverlay({ kind: 'delete', channel })} onMembers={channel => { choose(channel); showOverlay({ kind: 'members' }); }} onSignOut={signOut} onPeople={() => nav.showTab('people')} /> : <>
+        <Header key={w.activeId} activeChannel={active ?? null} channelDisplayName={displayName(active)} memberCount={memberCount} searchQuery={query} onSearchChange={setQuery} onRefresh={() => void w.refresh()} syncing={w.syncing}
+          isMembersDrawerOpen={overlay?.kind === 'members'} onToggleMembers={() => overlay?.kind === 'members' ? dismissOverlay() : showOverlay({ kind: 'members' })} onToggleMobileSidebar={nav.back} />
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          {active ? <Conversation key={w.user.user_id + ':' + active.channel_id} workspace={w} channel={active} searchQuery={query} onThread={id => showOverlay({ kind: 'thread', id })} /> : <main id="conversation" className="flex-1 p-6"><h1 className="text-xl font-semibold">Choose a conversation</h1><p className="mt-2 text-slate-600">Select or create a channel to get started.</p></main>}
+          {overlay?.kind === 'thread' && root && <ThreadDrawer key={root.message_id} rootMessage={root} allMessages={w.messages} channelDisplayName={displayName(active)} currentUserId={w.user.user_id} onClose={dismissOverlay} onSendReply={(content, parentMessageId) => w.act({ action: 'sendMessage', channelId: root.channel_id, content, parentMessageId })} />}
+          {overlay?.kind === 'members' && active && <ChannelMembersDrawer channel={active} memberships={w.memberships} workspaceUsers={w.users} currentUserId={w.user.user_id} onClose={dismissOverlay}
+            onAddMember={email => w.act({ action: 'addChannelMember', channelId: active.channel_id, email })} onRemoveMember={targetUserId => w.act({ action: 'removeChannelMember', channelId: active.channel_id, targetUserId })} />}
         </div>
-      </div>
-    );
-  }
-
-  if (!currentUser) {
-    return <AuthView onAuthenticated={handleAuthenticated} />;
-  }
-
-  return (
-    <WorkspaceShell
-      currentUser={currentUser}
-      isDirectMessage={Boolean(activeChannel?.dm_participants)}
-      onHome={() => { const home = publicChannels[0]; if (home) void handleSelectChannel(home.channel_id); }}
-      onDirectMessages={() => {
-        const partner = workspaceUsers.find(user => user.user_id !== currentUser.user_id) || currentUser;
-        void handleOpenDirectMessage(partner.user_id);
-      }}
-      onMembers={() => { setActiveThreadMessageId(null); setIsMembersDrawerOpen(prev => !prev); }}
-      onCreateChannel={() => { setCreateChannelDefaultPrivate(false); setIsCreateChannelOpen(true); }}
-    >
-      <OfflineIndicator />
-
-      <Sidebar
-        currentUser={currentUser}
-        workspaceUsers={workspaceUsers}
-        publicChannels={publicChannels}
-        privateChannels={privateChannels}
-        directMessageChannels={channels.filter(channel => Boolean(channel.dm_participants))}
-        activeChannelId={activeChannelId}
-        mobileSidebarOpen={mobileSidebarOpen}
-        onSelectChannel={handleSelectChannel}
-        onOpenDirectMessage={handleOpenDirectMessage}
-        onCreateChannel={(isPrivate) => {
-          setMobileSidebarOpen(false);
-          setCreateChannelDefaultPrivate(isPrivate);
-          setIsCreateChannelOpen(true);
-        }}
-        onEditChannel={(channel) => {
-          setMobileSidebarOpen(false);
-          setChannelModalTarget({ channel, mode: 'edit' });
-        }}
-        onDeleteChannel={(channel) => {
-          setMobileSidebarOpen(false);
-          setChannelModalTarget({ channel, mode: 'delete' });
-        }}
-        onManageChannelMembers={(channel) => {
-          setMobileSidebarOpen(false);
-          void handleSelectChannel(channel.channel_id);
-          setActiveThreadMessageId(null);
-          setIsMembersDrawerOpen(true);
-        }}
-        onSignOut={handleSignOut}
-        onToggleMobileSidebar={() => setMobileSidebarOpen((prev) => !prev)}
-      />
-
-      <div className='flex min-h-0 min-w-0 flex-1 flex-col'>
-        <Header
-          activeChannel={activeChannel ?? null}
-          channelDisplayName={getChannelDisplayName(activeChannel)}
-          memberCount={activeChannelMemberCount}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          onRefresh={() => syncWorkspace(currentUser.user_id, activeChannelId)}
-          syncing={syncing}
-          isMembersDrawerOpen={isMembersDrawerOpen}
-          onToggleMembers={() => { setActiveThreadMessageId(null); setIsMembersDrawerOpen((prev) => !prev); }}
-          onToggleMobileSidebar={() => setMobileSidebarOpen((prev) => !prev)}
-        />
-
-        <div className='flex min-h-0 flex-1 overflow-hidden'>
-          <main id='conversation' tabIndex={-1} className='flex min-h-0 min-w-0 flex-1 flex-col bg-white outline-none'>
-            <div className='min-h-0 flex-1 overflow-y-auto overscroll-contain'>
-              <MessageList
-                messages={rootMessages}
-                currentUser={currentUser}
-                loadingChannel={loadingChannel}
-                activeChannel={activeChannel ?? null}
-                searchQuery={searchQuery}
-                editingMessageId={editingMessageId}
-                editingContent={editingContent}
-                onEdit={(id) => {
-                  const msg = messages.find((m) => m.message_id === id);
-                  setEditingMessageId(id);
-                  setEditingContent(msg?.content ?? '');
-                }}
-                onSave={(id, content) => {
-                  setEditingContent(content);
-                  void handleSaveEditedMessage(id, content);
-                }}
-                onCancelEdit={() => {
-                  setEditingMessageId(null);
-                  setEditingContent('');
-                }}
-                onDelete={handleDeleteMessage}
-                onToggleReaction={handleToggleReaction}
-                onOpenThread={(id) => setActiveThreadMessageId(id)}
-                onEditingContentChange={setEditingContent}
-                messagesEndRef={messagesEndRef}
-              />
-            </div>
-
-            <Composer
-              currentUser={currentUser}
-              activeChannelId={activeChannelId}
-              activeChannel={activeChannel ?? null}
-              composerText={composerText}
-              onTextChange={setComposerText}
-              onSend={handleSendMessage}
-              sendingMessage={sendingMessage}
-              composerError={composerError}
-              onFormatInsert={insertFormatSnippet}
-            />
-          </main>
-
-          {activeThreadRootMessage && (
-            <ThreadDrawer
-              rootMessage={activeThreadRootMessage}
-              allMessages={messages}
-              channelDisplayName={
-                activeChannel?.dm_participants
-                  ? getChannelDisplayName(activeChannel)
-                  : '#' + getChannelDisplayName(activeChannel)
-              }
-              onClose={() => setActiveThreadMessageId(null)}
-              onSendReply={handleSendThreadReply}
-            />
-          )}
-
-          {!activeThreadRootMessage && isMembersDrawerOpen && activeChannel && (
-            <ChannelMembersDrawer
-              channel={activeChannel}
-              memberships={memberships}
-              workspaceUsers={workspaceUsers}
-              currentUserId={currentUser.user_id}
-              onClose={() => setIsMembersDrawerOpen(false)}
-              onAddMember={handleAddMemberToActiveChannel}
-              onRemoveMember={handleRemoveMemberFromActiveChannel}
-            />
-          )}
-        </div>
-      </div>
-
-
-
-      <CreateChannelModal
-        isOpen={isCreateChannelOpen}
-        defaultPrivate={createChannelDefaultPrivate}
-        onClose={() => setIsCreateChannelOpen(false)}
-        workspaceUsers={workspaceUsers}
-        currentUserId={currentUser.user_id}
-        onCreateChannel={handleCreateChannel}
-      />
-
-      <EditChannelModal
-        channel={channelModalTarget?.channel ?? null}
-        mode={channelModalTarget?.mode ?? 'edit'}
-        onClose={() => setChannelModalTarget(null)}
-        onEditChannel={handleEditChannel}
-        onDeleteChannel={handleDeleteChannel}
-      />
-    </WorkspaceShell>
-  );
+      </>}
+      {mobile && !keyboard && !overlay && !anyModal && <MobileTabBar tab={nav.tab} onChange={nav.showTab} />}
+    </div>
+    <CreateChannelModal isOpen={overlay?.kind === 'create'} defaultPrivate={overlay?.kind === 'create' ? overlay.isPrivate : false} onClose={dismissOverlay} workspaceUsers={w.users} currentUserId={w.user.user_id} onCreateChannel={create} />
+    <EditChannelModal channel={overlay?.kind === 'edit' || overlay?.kind === 'delete' ? overlay.channel : null} mode={overlay?.kind === 'delete' ? 'delete' : 'edit'} onClose={dismissOverlay} onEditChannel={params => w.act({ action: 'editChannel', ...params })} onDeleteChannel={remove} />
+  </WorkspaceShell>;
 }
-
-export default function App() {
-  return (
-    <ErrorBoundary>
-      <AppContent />
-    </ErrorBoundary>
-  );
-}
-
+export default function App() { return <ErrorBoundary><AppContent /></ErrorBoundary>; }

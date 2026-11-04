@@ -115,18 +115,18 @@ export const PushNotificationBadge: React.FC<PushNotificationBadgeProps> = ({
     'PushManager' in window;
 
   if (!VAPID_PUBLIC_KEY && !subscribed) {
-    return <span className="inline-flex h-8 w-8 items-center justify-center text-current opacity-50" title="Push notifications have not been configured for this workspace" aria-label="Push notifications have not been configured for this workspace"><BellOff className="h-4 w-4" /></span>;
+    return <span role="img" className="inline-flex h-8 w-8 items-center justify-center text-current opacity-50" title="Push notifications have not been configured for this workspace" aria-label="Push notifications have not been configured for this workspace"><BellOff className="h-4 w-4" /></span>;
   }
 
   if (!isSupported) {
     return (
-      <span className="inline-flex h-8 w-8 items-center justify-center text-current opacity-50" title="Push notifications are not supported in this browser" aria-label="Push notifications are not supported in this browser"><BellOff className="h-4 w-4" /></span>
+      <span role="img" className="inline-flex h-8 w-8 items-center justify-center text-current opacity-50" title="Push notifications are not supported in this browser" aria-label="Push notifications are not supported in this browser"><BellOff className="h-4 w-4" /></span>
     );
   }
 
   if (permission === 'denied') {
     return (
-      <span className="inline-flex h-8 w-8 items-center justify-center text-current opacity-50" title="Notifications are blocked. Enable them in browser settings." aria-label="Notifications are blocked. Enable them in browser settings."><BellOff className="h-4 w-4" /></span>
+      <span role="img" className="inline-flex h-8 w-8 items-center justify-center text-current opacity-50" title="Notifications are blocked. Enable them in browser settings." aria-label="Notifications are blocked. Enable them in browser settings."><BellOff className="h-4 w-4" /></span>
     );
   }
 

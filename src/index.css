@@ -1,6 +1,13 @@
 @import "tailwindcss";
 
 @theme {
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8fafc;
+  --color-content: #0f172a;
+  --color-content-muted: #475569;
+  --color-control-border: #cbd5e1;
   --color-blue-50: #eff6ff;
   --color-blue-100: #dbeafe;
   --color-blue-400: #60a5fa;
@@ -13,7 +20,7 @@
   html, body, #root { min-width: 0; width: 100%; min-height: 100%; }
   button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   button:not(:disabled), [role="button"] { cursor: pointer; }
-  :focus-visible { outline: 2px solid #217a5b; outline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
   textarea { resize: none; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -72,6 +79,17 @@
 .relay-symbol span:nth-child(3) { height: 14px; }
 .skip-link { position: fixed; top: -60px; left: 16px; z-index: 100; padding: 10px 16px; border-radius: 6px; background: white; color: #0f172a; }
 .skip-link:focus { top: 8px; }
+.touch-target { display: inline-flex; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; }
+.sheet-action { display: flex; min-height: 44px; width: 100%; align-items: center; gap: 12px; border-radius: 6px; padding: 8px 12px; text-align: left; font-size: 14px; }
+.sheet-action:hover { background: var(--color-surface-muted); }
+@media (max-width: 1023px) {
+  button { min-height: 44px; min-width: 44px; }
+  .mobile-tabbar { padding-bottom: 0; }
+}
+@media (min-width: 1024px) {
+  .touch-target { min-width: 32px; min-height: 32px; }
+  [role='dialog'] .touch-target { min-width: 44px; min-height: 44px; }
+}
 
 @layer base {
   :root {

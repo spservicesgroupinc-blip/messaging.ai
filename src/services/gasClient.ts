@@ -50,12 +50,16 @@ export function saveActiveChannelId(channelId: string): void {
 }
 
 export async function callSheetsBackend(
-  payload: GasRequestPayload
+  payload: GasRequestPayload,
+  signal?: AbortSignal
 ): Promise<GasResponse> {
+  const timeout = AbortSignal.timeout(15000);
   const res = await fetch('/api/gas', {
+    signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) throw new Error('Unable to connect. Please try again.');
   return (await res.json()) as GasResponse;
 }

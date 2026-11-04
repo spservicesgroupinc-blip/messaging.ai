@@ -20,9 +20,11 @@ interface MessageListProps {
   onOpenThread: (id: string) => void;
   onEditingContentChange: (value: string) => void;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  actionErrors?: Record<string, string>;
+  pendingMessageId?: string | null;
 }
 
-export const MessageList: React.FC<MessageListProps> = ({ messages, currentUser, loadingChannel, activeChannel, searchQuery, editingMessageId, editingContent, onEdit, onSave, onCancelEdit, onDelete, onToggleReaction, onOpenThread, onEditingContentChange, messagesEndRef }) => {
+export const MessageList: React.FC<MessageListProps> = ({ messages, currentUser, loadingChannel, activeChannel, searchQuery, editingMessageId, editingContent, onEdit, onSave, onCancelEdit, onDelete, onToggleReaction, onOpenThread, onEditingContentChange, messagesEndRef, actionErrors, pendingMessageId }) => {
   const rootMessages = useMemo(() => {
     const roots = messages.filter((m) => !m.parent_message_id);
     const query = searchQuery.trim().toLowerCase();
@@ -45,27 +47,27 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, currentUser,
     <div className='pb-5 [overflow-wrap:anywhere]'>
       {searchQuery.trim() ? (
         <div className='flex items-center gap-2 border-b border-[#e2e8f0] px-4 py-4 text-xs text-[#64748b] sm:px-6' role='status'>
-          <Search className='h-3.5 w-3.5 shrink-0' /><span>{rootMessages.length} {rootMessages.length === 1 ? 'result' : 'results'} for <strong className='break-all font-medium text-[#353b40]'>“{searchQuery}”</strong></span>
+          <Search className='h-3.5 w-3.5 shrink-0' /><span>{rootMessages.length} {rootMessages.length === 1 ? 'result' : 'results'} for <strong className='break-all font-medium text-slate-700'>“{searchQuery}”</strong></span>
         </div>
       ) : (
         <div className='px-4 pb-3 pt-8 sm:px-6'>
-          <div className='mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[#eef3f0] text-[#426955]'><ChannelIcon className='h-6 w-6' strokeWidth={1.7} /></div>
-          <h2 className='text-[23px] font-semibold tracking-[-0.5px] text-[#20252a]'>{isDm ? 'A space to connect' : activeChannel ? activeChannel.name : 'Your workspace'}</h2>
-          <p className='mt-1 max-w-2xl text-[13px] leading-5 text-[#72777d]'>
+          <div className='mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700'><ChannelIcon className='h-6 w-6' strokeWidth={1.7} /></div>
+          <h2 className='text-[23px] font-semibold tracking-[-0.5px] text-slate-900'>{isDm ? 'A space to connect' : activeChannel ? activeChannel.name : 'Your workspace'}</h2>
+          <p className='mt-1 max-w-2xl text-[13px] leading-5 text-slate-600'>
             {isDm ? 'This is the beginning of your direct conversation. Share an update, ask a question, or say hello.' : activeChannel?.description || 'A shared space for conversations, ideas, and keeping your team in the loop.'}
           </p>
-          {activeChannel?.is_private && !isDm && <p className='mt-2 flex items-center gap-1.5 text-[11px] text-[#72777d]'><LockKeyhole className='h-3 w-3' />Only invited members can see this channel.</p>}
+          {activeChannel?.is_private && !isDm && <p className='mt-2 flex items-center gap-1.5 text-[11px] text-slate-600'><LockKeyhole className='h-3 w-3' />Only invited members can see this channel.</p>}
         </div>
       )}
       {rootMessages.length === 0 && (
         <div role='status' className='px-4 py-10 sm:px-6'>
-          <p className='text-sm font-medium text-[#353b40]'>{searchQuery.trim() ? 'No messages found' : 'Start the conversation'}</p>
-          <p className='mt-1 text-[13px] leading-5 text-[#72777d]'>{searchQuery.trim() ? 'Try another keyword or clear your search to see all messages.' : 'Send the first message below. Great teamwork starts with a hello.'}</p>
+          <p className='text-sm font-medium text-slate-700'>{searchQuery.trim() ? 'No messages found' : 'Start the conversation'}</p>
+          <p className='mt-1 text-[13px] leading-5 text-slate-600'>{searchQuery.trim() ? 'Try another keyword or clear your search to see all messages.' : 'Send the first message below. Great teamwork starts with a hello.'}</p>
         </div>
       )}
       {rootMessages.map((message, index) => (
         <MessageItem key={message.message_id} msg={message} prevMsg={rootMessages[index - 1] ?? null} currentUser={currentUser} isEditing={editingMessageId === message.message_id} editingContent={editingContent}
-          onEdit={onEdit} onSave={(id) => onSave(id, editingContent)} onCancelEdit={onCancelEdit} onDelete={onDelete} onToggleReaction={onToggleReaction} onOpenThread={onOpenThread} onContentChange={onEditingContentChange} quickEmojis={QUICK_EMOJIS} />
+          onEdit={onEdit} onSave={(id) => onSave(id, editingContent)} onCancelEdit={onCancelEdit} onDelete={onDelete} onToggleReaction={onToggleReaction} onOpenThread={onOpenThread} onContentChange={onEditingContentChange} quickEmojis={QUICK_EMOJIS} actionError={actionErrors?.[message.message_id]} pending={pendingMessageId === message.message_id} />
       ))}
       <div ref={messagesEndRef} />
     </div>

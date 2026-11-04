@@ -8,7 +8,7 @@ if (import.meta.hot) import.meta.hot.dispose(stopObservingViewport);
 
 createRoot(document.getElementById('root')!).render(<App />);
 
-if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+if (import.meta.env.PROD && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/sw.js', { scope: '/' })

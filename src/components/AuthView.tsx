@@ -156,7 +156,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthenticated }) => {
 
   return (
 
-    <main className="auth-screen grid min-h-dvh bg-white text-[#20252a] lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+    <main className="auth-screen grid min-h-dvh bg-white text-slate-900 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
 
       <section className="relative hidden flex-col overflow-hidden bg-[#1e293b] px-12 py-10 text-white lg:flex xl:px-20">
 
@@ -204,7 +204,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthenticated }) => {
 
         <div className="flex items-center gap-2 text-xl font-semibold tracking-tight lg:hidden"><span className="flex h-8 w-8 items-center justify-center rounded-md bg-[#2563eb] text-white">r</span>relay</div>
 
-        <div className="flex justify-end text-xs text-[#72777d]">
+        <div className="flex justify-end text-xs text-slate-600">
 
           {mode === 'login' ? 'New to Relay?' : 'Already have an account?'}
 
@@ -218,7 +218,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthenticated }) => {
 
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{mode === 'login' ? 'Welcome back.' : 'Make room for better work.'}</h1>
 
-          <p className="mt-3 text-sm leading-6 text-[#72777d]">{mode === 'login' ? 'Sign in to pick up where your team left off.' : 'Create your account and join the conversation.'}</p>
+          <p className="mt-3 text-sm leading-6 text-slate-600">{mode === 'login' ? 'Sign in to pick up where your team left off.' : 'Create your account and join the conversation.'}</p>
 
           <form onSubmit={handleSubmit} className="mt-9 space-y-5" noValidate>
 
@@ -226,7 +226,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthenticated }) => {
 
               <div><label htmlFor="auth-full-name" className="text-sm font-medium">Full name</label><input id="auth-full-name" type="text" autoComplete="name" required value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Your full name" className={inputClass} /></div>
 
-              <div><label htmlFor="auth-role-title" className="text-sm font-medium">Job title <span className="font-normal text-[#72777d]">(optional)</span></label><input id="auth-role-title" type="text" autoComplete="organization-title" value={roleTitle} onChange={e => setRoleTitle(e.target.value)} placeholder="e.g. Product designer" className={inputClass} /></div>
+              <div><label htmlFor="auth-role-title" className="text-sm font-medium">Job title <span className="font-normal text-slate-600">(optional)</span></label><input id="auth-role-title" type="text" autoComplete="organization-title" value={roleTitle} onChange={e => setRoleTitle(e.target.value)} placeholder="e.g. Product designer" className={inputClass} /></div>
 
             </>}
 
@@ -244,11 +244,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthenticated }) => {
 
           </form>
 
-          <p className="mt-6 text-center text-xs leading-5 text-[#72777d]">One place to connect. More space to do your best work.</p>
+          <p className="mt-6 text-center text-xs leading-5 text-slate-600">One place to connect. More space to do your best work.</p>
 
         </div>
 
-        <p className="text-center text-[11px] text-[#72777d]">Relay · Thoughtfully connected.</p>
+        <p className="text-center text-[11px] text-slate-600">Relay · Thoughtfully connected.</p>
 
       </section>
 

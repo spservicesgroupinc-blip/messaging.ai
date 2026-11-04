@@ -1,3 +1,4 @@
+import { useModal } from '../hooks/useModal';
 import React, { useEffect, useRef, useState } from 'react';
 import { Hash, Lock, Plus, X } from 'lucide-react';
 import { Button } from './ui/Button';
@@ -29,8 +30,6 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
   currentUserId,
   onCreateChannel,
 }) => {
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
   const dialogRef = useRef<HTMLDivElement>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -47,24 +46,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
     }
   }, [isOpen, defaultPrivate]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const dialog = dialogRef.current;
-    const focusable = () => Array.from(dialog?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), [tabindex="0"]') || []);
-    dialog?.querySelector<HTMLInputElement>('#new-channel-name')?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') { event.preventDefault(); onCloseRef.current(); }
-      if (event.key !== 'Tab') return;
-      const controls = focusable();
-      const first = controls[0];
-      const last = controls[controls.length - 1];
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => { document.removeEventListener('keydown', onKeyDown); previousFocus?.focus(); };
-  }, [isOpen]);
+  useModal(dialogRef, isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -132,14 +114,14 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
     >
       <div className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-lg border border-[#e5e7e9] bg-white shadow-lg">
         <div className="flex items-center justify-between border-b border-[#e5e7e9] px-6 py-4">
-          <h2 id="create-channel-title" className="text-base font-semibold text-[#20252a]">
+          <h2 id="create-channel-title" className="text-base font-semibold text-slate-900">
             Create a {isPrivate ? 'Private' : 'Public'} Channel
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close create channel modal"
-            className="rounded-lg p-1.5 text-[#72777d] transition-colors hover:bg-slate-100 hover:text-[#20252a]"
+            className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
           >
             <X className="h-4 w-4" />
           </button>
@@ -161,8 +143,8 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
             >
               <Hash className="mt-0.5 h-4 w-4 shrink-0 text-slate-700" />
               <div className="mt-1">
-                <div className="text-xs font-semibold text-[#20252a]">Public Channel</div>
-                <p className="mt-0.5 text-xs text-[#72777d]">
+                <div className="text-xs font-semibold text-slate-900">Public Channel</div>
+                <p className="mt-0.5 text-xs text-slate-600">
                   Anyone in the workspace can view and join
                 </p>
               </div>
@@ -181,8 +163,8 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
             >
               <Lock className="mt-0.5 h-4 w-4 shrink-0 text-slate-700" />
               <div className="mt-1">
-                <div className="text-xs font-semibold text-[#20252a]">Private Channel</div>
-                <p className="mt-0.5 text-xs text-[#72777d]">
+                <div className="text-xs font-semibold text-slate-900">Private Channel</div>
+                <p className="mt-0.5 text-xs text-slate-600">
                   Only invited members can view and join
                 </p>
               </div>
@@ -214,7 +196,7 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
               />
             </div>
             {slugPreview && (
-              <p className="mt-1 text-xs text-[#72777d]">
+              <p className="mt-1 text-xs text-slate-600">
                 Channel handle:{' '}
                 <span className="font-mono font-medium text-slate-800">
                   {isPrivate ? '🔒 ' : '#'}
@@ -261,8 +243,8 @@ export const CreateChannelModal: React.FC<CreateChannelModalProps> = ({
                         <div className="flex items-center gap-2">
                           <Avatar userName={u.full_name} size="sm" className="h-6 w-6" />
                           <div className="truncate">
-                            <span className="font-medium text-[#20252a]">{u.full_name}</span>
-                            <span className="text-[#72777d]"> &middot; {u.email}</span>
+                            <span className="font-medium text-slate-900">{u.full_name}</span>
+                            <span className="text-slate-600"> &middot; {u.email}</span>
                           </div>
                         </div>
                         <input

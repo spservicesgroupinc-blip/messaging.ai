@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Hash, Lock, Menu, RefreshCw, Search, Users, X } from 'lucide-react';
+import { ArrowLeft, Hash, Lock, RefreshCw, Search, Users, X } from 'lucide-react';
 import { type SheetChannel } from '../utils/sheetsProtocol';
 
 interface HeaderProps {
@@ -23,22 +23,22 @@ export const Header: React.FC<HeaderProps> = ({
   const ChannelIcon = activeChannel?.dm_participants ? Users : activeChannel?.is_private ? Lock : Hash;
 
   return (
-    <header className='relative z-10 shrink-0 border-b border-[#e5e7e5] bg-white'>
+    <header className='relative z-10 shrink-0 border-b border-slate-200 bg-white'>
       <div className='flex h-14 items-center justify-between gap-1 px-2 sm:h-16 sm:gap-3 sm:px-6'>
         <div className='flex min-w-0 flex-1 items-center gap-1 sm:gap-3'>
-          <button type='button' onClick={onToggleMobileSidebar} aria-label='Open navigation sidebar'
+          <button type='button' onClick={onToggleMobileSidebar} aria-label='Back to conversations'
             className='flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-[#64748b] hover:bg-[#f1f5f9] lg:hidden'>
-            <Menu aria-hidden='true' className='h-5 w-5' />
+            <ArrowLeft aria-hidden='true' className='h-5 w-5' />
           </button>
-          <div className='hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#e2e8e3] bg-[#f6f8f6] sm:flex'>
-            <ChannelIcon aria-hidden='true' className='h-5 w-5 text-[#62756a]' strokeWidth={1.75} />
+          <div className='hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 sm:flex'>
+            <ChannelIcon aria-hidden='true' className='h-5 w-5 text-slate-600' strokeWidth={1.75} />
           </div>
           <div className='min-w-0'>
-            <h1 className='flex min-w-0 items-center gap-1.5 text-[16px] font-semibold tracking-tight text-[#242e28]'>
-              <ChannelIcon aria-hidden='true' className='h-4 w-4 shrink-0 text-[#69776e] sm:hidden' />
+            <h1 className='flex min-w-0 items-center gap-1.5 text-[16px] font-semibold tracking-tight text-slate-900'>
+              <ChannelIcon aria-hidden='true' className='h-4 w-4 shrink-0 text-slate-500 sm:hidden' />
               <span className='truncate'>{channelDisplayName}</span>
             </h1>
-            <p className='mt-0.5 truncate text-xs text-[#72777d]'>
+            <p className='mt-0.5 truncate text-xs text-slate-600'>
               {activeChannel?.description || (activeChannel?.dm_participants ? 'Your conversation, all in one place' : 'Keep the conversation moving')}
             </p>
           </div>

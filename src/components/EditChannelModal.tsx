@@ -1,3 +1,4 @@
+import { useModal } from '../hooks/useModal';
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Hash, Lock, Trash2, X } from 'lucide-react';
 import { Button } from './ui/Button';
@@ -26,8 +27,6 @@ export const EditChannelModal: React.FC<EditChannelModalProps> = ({
   onEditChannel,
   onDeleteChannel,
 }) => {
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
   const dialogRef = useRef<HTMLDivElement>(null);
 
   const [name, setName] = useState('');
@@ -46,29 +45,7 @@ export const EditChannelModal: React.FC<EditChannelModalProps> = ({
     }
   }, [channel, mode]);
 
-  useEffect(() => {
-    if (!channel) return;
-    const previousFocus =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const dialog = dialogRef.current;
-    if (mode === 'edit') {
-      dialog?.querySelector<HTMLInputElement>('#edit-channel-name')?.focus();
-    } else {
-      dialog?.querySelector<HTMLButtonElement>('[data-confirm-delete]')?.focus();
-    }
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onCloseRef.current();
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      previousFocus?.focus();
-    };
-  }, [channel, mode]);
+  useModal(dialogRef, Boolean(channel), onClose);
 
   if (!channel) return null;
 
@@ -134,7 +111,7 @@ export const EditChannelModal: React.FC<EditChannelModalProps> = ({
           <div className='flex items-center justify-between border-b border-[#e5e7e9] px-6 py-4'>
             <div className='flex items-center gap-2'>
               <AlertTriangle className='h-4 w-4 text-red-600' />
-              <h2 id='delete-channel-title' className='text-base font-semibold text-[#20252a]'>
+              <h2 id='delete-channel-title' className='text-base font-semibold text-slate-900'>
                 Delete #{channel.name}
               </h2>
             </div>
@@ -142,7 +119,7 @@ export const EditChannelModal: React.FC<EditChannelModalProps> = ({
               type='button'
               onClick={onClose}
               aria-label='Close delete channel modal'
-              className='rounded-lg p-1.5 text-[#72777d] transition-colors hover:bg-slate-100 hover:text-[#20252a]'
+              className='rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900'
             >
               <X className='h-4 w-4' />
             </button>
@@ -151,7 +128,7 @@ export const EditChannelModal: React.FC<EditChannelModalProps> = ({
           <div className='space-y-4 p-6'>
             <p className='text-sm leading-relaxed text-[#4f5853]'>
               Are you sure you want to permanently delete{' '}
-              <span className='font-semibold text-[#20252a]'>#{channel.name}</span>? All
+              <span className='font-semibold text-slate-900'>#{channel.name}</span>? All
               messages and thread replies in this channel will be removed.
             </p>
 
@@ -198,14 +175,14 @@ export const EditChannelModal: React.FC<EditChannelModalProps> = ({
     >
       <div className='my-auto max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-lg border border-[#e5e7e9] bg-white shadow-lg'>
         <div className='flex items-center justify-between border-b border-[#e5e7e9] px-6 py-4'>
-          <h2 id='edit-channel-title' className='text-base font-semibold text-[#20252a]'>
+          <h2 id='edit-channel-title' className='text-base font-semibold text-slate-900'>
             Edit #{channel.name}
           </h2>
           <button
             type='button'
             onClick={onClose}
             aria-label='Close edit channel modal'
-            className='rounded-lg p-1.5 text-[#72777d] transition-colors hover:bg-slate-100 hover:text-[#20252a]'
+            className='rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900'
           >
             <X className='h-4 w-4' />
           </button>
@@ -226,8 +203,8 @@ export const EditChannelModal: React.FC<EditChannelModalProps> = ({
             >
               <Hash className='mt-0.5 h-4 w-4 shrink-0 text-slate-700' />
               <div className='mt-1'>
-                <div className='text-xs font-semibold text-[#20252a]'>Public Channel</div>
-                <p className='mt-0.5 text-xs text-[#72777d]'>
+                <div className='text-xs font-semibold text-slate-900'>Public Channel</div>
+                <p className='mt-0.5 text-xs text-slate-600'>
                   Anyone in the workspace can view and join
                 </p>
               </div>
@@ -246,8 +223,8 @@ export const EditChannelModal: React.FC<EditChannelModalProps> = ({
             >
               <Lock className='mt-0.5 h-4 w-4 shrink-0 text-slate-700' />
               <div className='mt-1'>
-                <div className='text-xs font-semibold text-[#20252a]'>Private Channel</div>
-                <p className='mt-0.5 text-xs text-[#72777d]'>
+                <div className='text-xs font-semibold text-slate-900'>Private Channel</div>
+                <p className='mt-0.5 text-xs text-slate-600'>
                   Only invited members can view and join
                 </p>
               </div>
@@ -278,7 +255,7 @@ export const EditChannelModal: React.FC<EditChannelModalProps> = ({
               />
             </div>
             {slugPreview && (
-              <p className='mt-1 text-xs text-[#72777d]'>
+              <p className='mt-1 text-xs text-slate-600'>
                 Channel handle:{' '}
                 <span className='font-mono font-medium text-slate-800'>
                   {isPrivate ? '🔒 ' : '#'}

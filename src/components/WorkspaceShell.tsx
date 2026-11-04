@@ -15,12 +15,12 @@ interface WorkspaceShellProps {
 
 export function WorkspaceShell({ currentUser, isDirectMessage, onHome, onDirectMessages, onMembers, onCreateChannel, children }: WorkspaceShellProps) {
   return (
-    <div className="workspace-shell flex h-dvh min-h-0 flex-col overflow-hidden bg-white text-stone-900">
+    <div className="workspace-shell flex h-dvh min-h-0 flex-col overflow-hidden bg-white text-slate-900">
       <a href="#conversation" className="skip-link">Skip to conversation</a>
       <div className="workspace-topbar flex h-11 shrink-0 items-center justify-between gap-4 px-4 text-white lg:px-5">
         <div className="flex items-center gap-2.5">
           <span className="relay-symbol" aria-hidden="true"><span /><span /><span /></span>
-          <span className="text-sm font-semibold tracking-tight">relay<span className="text-emerald-300">.</span></span>
+          <span className="text-sm font-semibold tracking-tight">relay<span className="text-blue-300">.</span></span>
           <span className="mx-2 hidden h-3.5 w-px bg-white/15 sm:block" />
           <span className="hidden text-xs text-white/60 sm:block">Team workspace</span>
         </div>

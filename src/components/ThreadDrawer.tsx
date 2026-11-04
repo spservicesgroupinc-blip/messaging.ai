@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { MessageSquare, Send, X } from 'lucide-react';
 import { Avatar } from './ui/Avatar';
 import { Button } from './ui/Button';
+import { useModal } from '../hooks/useModal';
+import { useMobile, useOnline } from '../hooks/useDeviceState';
+import { useDraft } from '../hooks/useDraft';
+import type { ActionResult } from '../hooks/useWorkspace';
 import {
   formatTimeShort,
   type EnrichedMessage,
@@ -11,8 +15,9 @@ interface ThreadDrawerProps {
   rootMessage: EnrichedMessage;
   allMessages: EnrichedMessage[];
   channelDisplayName: string;
+  currentUserId: string;
   onClose: () => void;
-  onSendReply: (content: string, parentMessageId: string) => Promise<void>;
+  onSendReply: (content: string, parentMessageId: string) => Promise<ActionResult>;
 }
 
 export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
@@ -20,42 +25,18 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
   allMessages,
   channelDisplayName,
   onClose,
+  currentUserId,
   onSendReply,
 }) => {
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
   const closeRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement>(null);
-  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 1023px)').matches);
-  useEffect(() => {
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    closeRef.current?.focus();
-    const mobileMedia = window.matchMedia('(max-width: 1023px)');
-    const onViewportChange = () => {
-      setIsMobile(mobileMedia.matches);
-      if (mobileMedia.matches && !panelRef.current?.contains(document.activeElement)) closeRef.current?.focus();
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onCloseRef.current();
-      if (event.key !== 'Tab' || !mobileMedia.matches) return;
-      const panel = panelRef.current;
-      const controls = Array.from(panel?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), [tabindex="0"]') || []);
-      const first = controls[0];
-      const last = controls[controls.length - 1];
-      if (!panel?.contains(document.activeElement)) { event.preventDefault(); first?.focus(); }
-      else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
-    };
-    mobileMedia.addEventListener('change', onViewportChange);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      mobileMedia.removeEventListener('change', onViewportChange);
-      document.removeEventListener('keydown', onKeyDown);
-      previousFocus?.focus();
-    };
-  }, []);
-
-  const [replyText, setReplyText] = useState('');
+  const isMobile = useMobile();
+  const online = useOnline();
+  useModal(panelRef, isMobile, onClose);
+  const draft = useDraft(currentUserId, rootMessage.channel_id, rootMessage.message_id);
+  const [error, setError] = useState('');
+  const replyText = draft.text;
+  const setReplyText = draft.setText;
   const [sending, setSending] = useState(false);
 
   const replies = allMessages.filter(
@@ -65,12 +46,14 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = replyText.trim();
-    if (!trimmed || sending) return;
+    if (!trimmed || sending || !online) return;
 
-    setSending(true);
+    setSending(true); setError('');
     try {
-      await onSendReply(trimmed, rootMessage.message_id);
-      setReplyText('');
+      const result = await onSendReply(trimmed, rootMessage.message_id);
+      if (result.ok) draft.clearSent(replyText);
+      else setError(result.error || 'Reply was not sent. Your draft was kept.');
+    } catch { setError('Reply was not sent. Your draft was kept. Try again.');
     } finally {
       setSending(false);
     }
@@ -79,6 +62,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
   return (
     <aside
       ref={panelRef}
+      tabIndex={-1}
       role={isMobile ? 'dialog' : undefined}
       aria-modal={isMobile || undefined}
       aria-label="Message thread replies"
@@ -89,8 +73,8 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
         <div className="flex items-center gap-2 min-w-0">
           <MessageSquare className="h-4 w-4 shrink-0 text-slate-600" />
           <div className="truncate">
-            <span className="text-sm font-semibold text-[#20252a]">Thread</span>
-            <span className="text-xs text-[#72777d]"> &middot; {channelDisplayName}</span>
+            <span className="text-sm font-semibold text-slate-900">Thread</span>
+            <span className="text-xs text-slate-600"> &middot; {channelDisplayName}</span>
           </div>
         </div>
         <button
@@ -112,11 +96,11 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
             <Avatar userName={rootMessage.user_name} size="md" className="h-8 w-8 shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-baseline gap-x-2 text-xs">
-                <span className="font-semibold text-[#20252a]">{rootMessage.user_name}</span>
+                <span className="font-semibold text-slate-900">{rootMessage.user_name}</span>
                 <span aria-hidden="true" className="text-slate-400">
                   &middot;
                 </span>
-                <span className="tabular-nums text-[#72777d]">
+                <span className="tabular-nums text-slate-600">
                   {formatTimeShort(rootMessage.created_at)}
                 </span>
               </div>
@@ -125,14 +109,14 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
               </p>
             </div>
           </div>
-          <div className="mt-3 text-xs font-medium text-[#72777d] tabular-nums">
+          <div className="mt-3 text-xs font-medium text-slate-600 tabular-nums">
             {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
           </div>
         </div>
 
         {/* Replies List */}
         {replies.length === 0 ? (
-          <p className="py-4 text-center text-xs text-[#72777d]">
+          <p className="py-4 text-center text-xs text-slate-600">
             No replies in this thread yet. Reply below to start the conversation.
           </p>
         ) : (
@@ -142,11 +126,11 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
                 <Avatar userName={reply.user_name} size="sm" className="h-7 w-7 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline gap-x-2 text-xs">
-                    <span className="font-semibold text-[#20252a]">{reply.user_name}</span>
+                    <span className="font-semibold text-slate-900">{reply.user_name}</span>
                     <span aria-hidden="true" className="text-slate-400">
                       &middot;
                     </span>
-                    <span className="tabular-nums text-[#72777d]">
+                    <span className="tabular-nums text-slate-600">
                       {formatTimeShort(reply.created_at)}
                     </span>
                   </div>
@@ -162,20 +146,25 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
 
       {/* Thread Reply Composer */}
       <form onSubmit={handleSubmit} className="shrink-0 border-t border-[#e5e7e9] p-4">
+        {error && <p role="alert" className="mb-2 text-sm text-red-800">{error}</p>}
+        {draft.saveFailed && <p role="status" className="mb-2 text-xs text-amber-900">Draft not saved on this device. Keep this app open.</p>}
+        {!online && <p role="status" className="mb-2 text-xs text-slate-600">Offline draft — reconnect, then tap Send.</p>}
         <div className="flex items-center gap-2">
-          <input
-            type="text"
+          <textarea
+            rows={2}
+            disabled={sending}
             aria-label="Reply in thread"
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
+            onKeyDown={event => { if (!isMobile && event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void handleSubmit(event); } }}
             placeholder="Reply in thread..."
-            className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#64748b] focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb]/20 focus:outline-none"
+            className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 max-h-40 resize-none text-base text-[#0f172a] placeholder:text-[#64748b] focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb]/20 focus:outline-none"
           />
           <Button
             type="submit"
             variant="primary"
             size="md"
-            disabled={!replyText.trim() || sending}
+            disabled={!replyText.trim() || sending || !online}
             loading={sending}
             aria-label="Send thread reply"
           >

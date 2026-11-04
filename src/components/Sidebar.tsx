@@ -102,24 +102,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <aside ref={sidebarRef} aria-label='Workspace navigation'
         className={'workspace-sidebar fixed inset-y-0 left-0 z-40 flex w-[252px] shrink-0 flex-col border-r border-[#e2e8f0] bg-[#f8fafc] transition-transform lg:static lg:translate-x-0 ' +
           (mobileSidebarOpen ? 'visible translate-x-0' : 'invisible -translate-x-full lg:visible')}>
-        <div className='flex h-16 shrink-0 items-center justify-between gap-2 border-b border-[#e5e7e5] px-4'>
+        <div className='flex h-16 shrink-0 items-center justify-between gap-2 border-b border-slate-200 px-4'>
           <div className='flex min-w-0 items-center gap-2.5'>
-            <div aria-hidden='true' className='flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#243d32] text-base font-bold text-white'>R<span className='text-[#9bcbaf]'>.</span></div>
+            <div aria-hidden='true' className='flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-base font-bold text-white'>R<span className='text-blue-300'>.</span></div>
             <div className='min-w-0'>
-              <div className='truncate text-[15px] font-semibold tracking-tight text-[#242e28]'>Relay Workspace</div>
+              <div className='truncate text-[15px] font-semibold tracking-tight text-slate-900'>Relay Workspace</div>
               <div className='mt-0.5 text-[11px] text-[#64748b]'>A place for your team</div>
             </div>
           </div>
           <button type='button' aria-label='Close navigation sidebar' onClick={onToggleMobileSidebar}
-            className='rounded p-1.5 text-[#626d65] hover:bg-[#e6eae6] lg:hidden'><X className='h-4 w-4' /></button>
+            className='rounded p-1.5 text-slate-600 hover:bg-slate-100 lg:hidden'><X className='h-4 w-4' /></button>
         </div>
 
         <nav aria-label='Channels and conversations' className='min-h-0 flex-1 space-y-5 overflow-y-auto px-3 pb-5 pt-4'>
           <button type='button' onClick={() => onCreateChannel(false)}
-            className='mb-1 flex h-9 w-full items-center gap-2.5 rounded-md border border-[#dce2dd] bg-white px-2.5 text-sm font-medium text-[#3d4941] transition-colors hover:border-[#b8c8bd] hover:bg-[#fcfdfc]'>
-            <SquarePen aria-hidden='true' className='h-4 w-4 text-[#657269]' strokeWidth={1.75} />
+            className='mb-1 flex h-9 w-full items-center gap-2.5 rounded-md border border-slate-200 bg-white px-2.5 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50'>
+            <SquarePen aria-hidden='true' className='h-4 w-4 text-slate-600' strokeWidth={1.75} />
             New channel
-            <Plus aria-hidden='true' className='ml-auto h-3.5 w-3.5 text-[#89928b]' />
+            <Plus aria-hidden='true' className='ml-auto h-3.5 w-3.5 text-slate-500' />
           </button>
           <NavigationSection title='Channels' onAdd={() => onCreateChannel(false)} addLabel='Create new channel'>
             {publicChannels.map((channel) => (
@@ -166,7 +166,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </NavigationSection>
         </nav>
 
-        <div className='flex shrink-0 items-center gap-2.5 border-t border-[#e1e5e1] p-3.5'>
+        <div className='flex shrink-0 items-center gap-2.5 border-t border-slate-200 p-3.5'>
           <Avatar userName={currentUser.full_name} size='md' className='shrink-0 !rounded-lg' />
           <div className='min-w-0 flex-1'>
             <div className='truncate text-xs font-semibold text-[#475569]'>{currentUser.full_name}</div>

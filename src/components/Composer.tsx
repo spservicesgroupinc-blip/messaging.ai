@@ -1,66 +1,86 @@
-import React, { useRef, useState } from 'react';
-import { Bold, Code2, Italic, LoaderCircle, SendHorizontal, Smile, Strikethrough, Type } from 'lucide-react';
-import { type PublicUser, type SheetChannel } from '../utils/sheetsProtocol';
+import { useEffect, useRef, useState } from 'react';
+import { Bold, Code2, Italic, LoaderCircle, SendHorizontal, Smile, Strikethrough, Type, X } from 'lucide-react';
+import { useDraft } from '../hooks/useDraft';
+import { useMobile, useOnline } from '../hooks/useDeviceState';
+import type { ActionResult } from '../hooks/useWorkspace';
+import type { PublicUser, SheetChannel } from '../utils/sheetsProtocol';
 
 interface ComposerProps {
-  currentUser: PublicUser | null;
-  activeChannelId: string | null;
-  activeChannel: SheetChannel | null;
-  composerText: string;
-  onTextChange: (value: string) => void;
-  onSend: () => void;
-  sendingMessage: boolean;
-  composerError: string | '';
-  onFormatInsert: (prefix: string, suffix?: string) => void;
+  currentUser: PublicUser;
+  activeChannel: SheetChannel;
+  onSend: (content: string) => Promise<ActionResult>;
 }
-const FORMAT_ACTIONS = [
-  { icon: Bold, label: 'Bold', marker: '**' },
-  { icon: Italic, label: 'Italic', marker: '_' },
-  { icon: Strikethrough, label: 'Strikethrough', marker: '~~' },
-  { icon: Code2, label: 'Insert inline code', marker: '`' },
+const FORMATS = [
+  { icon: Bold, label: 'Bold', marker: '**' }, { icon: Italic, label: 'Italic', marker: '_' },
+  { icon: Strikethrough, label: 'Strikethrough', marker: '~~' }, { icon: Code2, label: 'Insert inline code', marker: '`' },
 ];
-
-export const Composer: React.FC<ComposerProps> = ({ currentUser, activeChannelId, activeChannel, composerText, onTextChange, onSend, sendingMessage, composerError, onFormatInsert }) => {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+export function Composer({ currentUser, activeChannel, onSend }: ComposerProps) {
+  const draft = useDraft(currentUser.user_id, activeChannel.channel_id);
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const selection = useRef({ start: 0, end: 0 });
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  const [formatting, setFormatting] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
-  const [formattingOpen, setFormattingOpen] = useState(false);
-  const unavailable = !currentUser || !activeChannelId || sendingMessage;
-  const target = activeChannel?.dm_participants ? 'your conversation' : activeChannel ? '#' + activeChannel.name : 'your channel';
-  const insertFormat = (marker: string) => {
-    const input = textareaRef.current;
+  const online = useOnline();
+  const mobile = useMobile();
+  useEffect(() => {
+    const input = ref.current;
     if (!input) return;
-    const { selectionStart: start, selectionEnd: end } = input;
-    if (start !== end) {
-      onTextChange(composerText.slice(0, start) + marker + composerText.slice(start, end) + marker + composerText.slice(end));
-    } else {
-      onFormatInsert(marker);
-    }
-    input.focus();
+    input.style.height = 'auto';
+    input.style.height = Math.min(160, Math.max(64, input.scrollHeight)) + 'px';
+  }, [draft.text]);
+  const rememberSelection = () => {
+    if (ref.current) selection.current = { start: ref.current.selectionStart, end: ref.current.selectionEnd };
   };
-  return (
-    <div className='shrink-0 bg-white px-3 pb-3 pt-2 sm:px-6 sm:pb-4'>
-      {composerError && <div role='alert' className='mb-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800'>{composerError}</div>}
-      <form onSubmit={(event) => { event.preventDefault(); if (!unavailable && composerText.trim()) void onSend(); }} className='rounded-lg border border-[#cbd5e1] bg-white transition-colors focus-within:border-[#94a3b8] focus-within:ring-2 focus-within:ring-[#2563eb]/5'>
-        <div id='message-formatting' className={(formattingOpen ? 'flex' : 'hidden') + ' items-center gap-0.5 rounded-t-lg bg-[#f7f8f7] px-2 py-1.5 sm:flex'} role='toolbar' aria-label='Message formatting'>
-          {FORMAT_ACTIONS.map(({ icon: Icon, label, marker }) => <button key={label} type='button' disabled={unavailable} onClick={() => insertFormat(marker)} title={label} aria-label={label} className='flex h-11 w-11 items-center justify-center rounded text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#0f172a] disabled:opacity-40 sm:h-7 sm:w-8'><Icon className='h-4 w-4' strokeWidth={1.8} /></button>)}
+  const insert = (prefix: string, suffix = '') => {
+    const { start, end } = selection.current;
+    const selected = draft.text.slice(start, end);
+    const content = suffix ? (selected || 'text') : '';
+    const next = draft.text.slice(0, start) + prefix + content + suffix + draft.text.slice(end);
+    draft.setText(next);
+    requestAnimationFrame(() => {
+      ref.current?.focus();
+      const from = start + prefix.length;
+      const to = suffix ? from + content.length : from;
+      ref.current?.setSelectionRange(from, to); rememberSelection();
+    });
+  };
+  const send = async () => {
+    const text = draft.text;
+    if (!text.trim() || sending || !online) return;
+    setSending(true); setError('');
+    try {
+      const result = await onSend(text.trim());
+      if (result.ok) draft.clearSent(text); else setError(result.error || 'Message was not sent. Your draft was kept.');
+    } catch { setError('Message was not sent. Your draft was kept. Try again.'); }
+    finally { setSending(false); }
+  };
+  return <section aria-label="Write a message" className="shrink-0 bg-white px-3 pb-3 pt-2 sm:px-6 sm:pb-4">
+    {error && <p role="alert" className="mb-2 rounded-md bg-red-50 p-2 text-sm text-red-800">{error}</p>}
+    {draft.saveFailed && <p role="status" className="mb-2 text-xs text-amber-900">Draft not saved on this device. Keep this app open.</p>}
+    <form onSubmit={event => { event.preventDefault(); void send(); }} className="overflow-hidden rounded-lg border border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100">
+      <div id="message-formatting" className={(formatting ? 'flex' : 'hidden') + ' items-center gap-1 bg-slate-50 px-2 py-1 sm:flex'} role="group" aria-label="Message formatting">
+        {FORMATS.map(({ icon: Icon, label, marker }) => <button key={label} type="button" disabled={sending} onPointerDown={event => event.preventDefault()} onClick={() => insert(marker, marker)} aria-label={label} className="touch-target rounded text-slate-600 hover:bg-slate-100"><Icon size={16} /></button>)}
+      </div>
+      <textarea ref={ref} rows={2} aria-label="Message input" disabled={sending} value={draft.text} onChange={event => { draft.setText(event.target.value); rememberSelection(); }} onSelect={rememberSelection} onBlur={rememberSelection}
+        onKeyDown={event => { if (!mobile && event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(); } }}
+        placeholder={activeChannel.dm_participants ? 'Message your conversation' : 'Message #' + activeChannel.name}
+        className="block max-h-40 min-h-16 w-full resize-none overflow-y-auto border-0 bg-transparent px-3 py-2 text-base leading-6 outline-none placeholder:text-slate-500 disabled:opacity-60 lg:text-sm" />
+      <div className="flex items-center justify-between gap-2 px-2 pb-2">
+        <div className="relative flex items-center">
+          <button type="button" aria-label="Message formatting" aria-controls="message-formatting" aria-expanded={formatting} onPointerDown={event => event.preventDefault()} onClick={() => setFormatting(!formatting)} className="touch-target rounded text-slate-600 hover:bg-slate-100 sm:hidden"><Type size={18} /></button>
+          <button type="button" aria-label="Insert emoji" aria-expanded={emojiOpen} onPointerDown={event => event.preventDefault()} onClick={() => setEmojiOpen(!emojiOpen)} className="touch-target rounded text-slate-600 hover:bg-slate-100"><Smile size={18} /></button>
+          {draft.text && <button type="button" aria-label="Clear draft" onClick={() => draft.setText('')} disabled={sending} className="touch-target rounded text-slate-600 hover:bg-slate-100"><X size={16} /></button>}
+          {emojiOpen && <div className="absolute bottom-full left-0 z-20 mb-2 flex rounded-lg border border-slate-200 bg-white p-1 shadow-sm" role="group" aria-label="Choose emoji" onKeyDown={event => { if (event.key === 'Escape') setEmojiOpen(false); }}>
+            {['👋', '👍', '✅', '🎉', '💙'].map(emoji => <button key={emoji} type="button" aria-label={'Insert ' + emoji} onPointerDown={event => event.preventDefault()} onClick={() => { insert(emoji); setEmojiOpen(false); }} className="touch-target rounded text-base hover:bg-slate-100">{emoji}</button>)}
+          </div>}
         </div>
-        <textarea ref={textareaRef} rows={2} aria-label='Message input' disabled={unavailable} value={composerText} onChange={(event) => onTextChange(event.target.value)}
-          onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!unavailable && composerText.trim()) void onSend(); } }}
-          placeholder={'Message ' + target} className='block max-h-40 min-h-16 w-full resize-y border-0 bg-transparent px-3.5 py-2 text-base leading-[21px] text-[#0f172a] outline-none placeholder:text-[#64748b] disabled:opacity-50 sm:py-3 sm:text-sm' />
-        <div className='flex items-center justify-between px-2.5 pb-2'>
-          <div className='relative flex items-center'>
-            <button type='button' aria-label='Message formatting' aria-expanded={formattingOpen} aria-controls='message-formatting' onClick={() => setFormattingOpen(!formattingOpen)} disabled={unavailable} className='flex h-11 w-11 items-center justify-center rounded text-[#64748b] hover:bg-[#f1f5f9] disabled:opacity-40 sm:hidden'><Type className='h-[18px] w-[18px]' /></button>
-            <button type='button' aria-label='Insert emoji' aria-expanded={emojiOpen} onClick={() => setEmojiOpen(!emojiOpen)} disabled={unavailable} title='Insert emoji' className='flex h-11 w-11 items-center justify-center rounded text-[#64748b] hover:bg-[#f1f5f9] disabled:opacity-40 sm:h-8 sm:w-8'><Smile className='h-[18px] w-[18px]' strokeWidth={1.7} /></button>
-            {emojiOpen && <div className='absolute bottom-full left-0 z-20 mb-2 flex rounded-lg border border-[#e5e7e9] bg-white p-1 shadow-sm' role='group' aria-label='Choose emoji' onKeyDown={(event) => { if (event.key === 'Escape') setEmojiOpen(false); }}>
-              {['👋', '👍', '✅', '🎉', '💙'].map((emoji) => <button key={emoji} type='button' aria-label={'Insert ' + emoji} onClick={() => { onTextChange(composerText + emoji); setEmojiOpen(false); textareaRef.current?.focus(); }} className='flex h-11 w-11 items-center justify-center rounded text-base hover:bg-[#f1f5f9] sm:h-8 sm:w-8'>{emoji}</button>)}
-            </div>}
-          </div>
-          <button type='submit' disabled={!composerText.trim() || unavailable} aria-label='Send message' title='Send message' className='flex h-11 min-w-11 items-center justify-center gap-2 rounded-md bg-[#2563eb] px-3 text-xs font-medium text-white transition-colors hover:bg-[#1e40af] disabled:bg-[#f1f5f9] disabled:text-[#94a3b8] sm:h-8 sm:min-w-0'>
-            <span className='hidden sm:inline'>{sendingMessage ? 'Sending' : 'Send'}</span>{sendingMessage ? <LoaderCircle className='h-4 w-4 animate-spin' /> : <SendHorizontal className='h-4 w-4' />}
-          </button>
-        </div>
-      </form>
-      <p className='mt-2 hidden text-right text-[10px] leading-4 text-[#818781] sm:block'><span className='font-medium'>Enter</span> to send <span className='mx-1 text-[#c4c9c5]'>·</span><span className='font-medium'>Shift + Enter</span> for a new line</p>
-    </div>
-  );
-};
+        <button type="submit" disabled={!draft.text.trim() || sending || !online} aria-label="Send message" className="touch-target gap-2 rounded-md bg-blue-600 px-3 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-slate-100 disabled:text-slate-500">
+          <span className="hidden sm:inline">{sending ? 'Sending' : 'Send'}</span>{sending ? <LoaderCircle size={18} className="animate-spin" /> : <SendHorizontal size={18} />}
+        </button>
+      </div>
+    </form>
+    {!online ? <p role="status" className="mt-1 text-xs text-slate-600">Offline draft — reconnect, then tap Send.</p> : <p className="mt-1 hidden text-right text-xs text-slate-600 lg:block">Enter to send · Shift + Enter for a new line</p>}
+  </section>;
+}

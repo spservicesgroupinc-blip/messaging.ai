@@ -2,7 +2,7 @@ import React from 'react';
 
 const VARIANT_CLASSES: Record<string, string> = {
   primary:
-    'bg-[#2563eb] text-white hover:bg-[#196348] disabled:bg-[#2563eb] transition-colors',
+    'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-600 transition-colors',
   secondary:
     'bg-white border border-[#cbd5e1] text-[#0f172a] hover:bg-[#f8fafc] disabled:bg-[#f1f5f9] disabled:text-[#94a3b8] disabled:border-[#e2e8f0] transition-colors',
   ghost:
