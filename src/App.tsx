@@ -500,7 +500,7 @@ function AppContent() {
 
   if (loadingWorkspace) {
     return (
-      <div className='flex min-h-screen items-center justify-center bg-slate-50 text-slate-600'>
+      <div className='flex min-h-dvh items-center justify-center bg-slate-50 text-slate-600'>
         <div className='flex items-center gap-3 text-sm font-medium'>
           <RefreshCw className='h-4 w-4 animate-spin text-blue-600' />
           <span>Loading Relay Workspace...</span>
@@ -560,7 +560,7 @@ function AppContent() {
         onToggleMobileSidebar={() => setMobileSidebarOpen((prev) => !prev)}
       />
 
-      <div className='flex min-w-0 flex-1 flex-col'>
+      <div className='flex min-h-0 min-w-0 flex-1 flex-col'>
         <Header
           activeChannel={activeChannel ?? null}
           channelDisplayName={getChannelDisplayName(activeChannel)}
@@ -575,7 +575,7 @@ function AppContent() {
         />
 
         <div className='flex min-h-0 flex-1 overflow-hidden'>
-          <main id='conversation' tabIndex={-1} className='flex min-w-0 flex-1 flex-col bg-white outline-none'>
+          <main id='conversation' tabIndex={-1} className='flex min-h-0 min-w-0 flex-1 flex-col bg-white outline-none'>
             <div className='min-h-0 flex-1 overflow-y-auto overscroll-contain'>
               <MessageList
                 messages={rootMessages}

@@ -10,7 +10,7 @@
 }
 
 @layer base {
-  html, body, #root { min-width: 320px; min-height: 100%; }
+  html, body, #root { min-width: 0; width: 100%; min-height: 100%; }
   button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
   button:not(:disabled), [role="button"] { cursor: pointer; }
   :focus-visible { outline: 2px solid #217a5b; outline-offset: 3px; }
@@ -26,7 +26,40 @@
 
 .workspace-topbar, .workspace-rail { background: #1e293b; }
 .workspace-topbar { padding-top: env(safe-area-inset-top); height: calc(44px + env(safe-area-inset-top)); }
-.workspace-shell { padding-bottom: env(safe-area-inset-bottom); }
+.auth-screen {
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+.workspace-shell {
+  position: fixed;
+  top: var(--app-offset-top, 0px);
+  left: 0;
+  width: 100%;
+  height: var(--app-height, 100dvh);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+}
+
+/* Fixed mobile panels share the keyboard-aware viewport and device safe areas. */
+@media (max-width: 1023px) {
+  .workspace-sidebar, .workspace-drawer, .workspace-modal {
+    top: var(--app-offset-top, 0px);
+    bottom: auto;
+    height: var(--app-height, 100dvh);
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+  .workspace-sidebar { width: min(288px, 100%); }
+  .workspace-modal {
+    padding: max(1rem, env(safe-area-inset-top, 0px)) max(1rem, env(safe-area-inset-right, 0px)) max(1rem, env(safe-area-inset-bottom, 0px)) max(1rem, env(safe-area-inset-left, 0px));
+  }
+  .workspace-modal > div { max-height: 100%; }
+  /* Avoid automatic focus zoom in iOS while keeping browser zoom available. */
+  input:not([type='checkbox']):not([type='radio']), textarea, select { font-size: 16px; }
+  .workspace-sidebar button, .workspace-drawer button { min-height: 44px; }
+}
 .rail-action { display: flex; width: 52px; flex-direction: column; align-items: center; gap: 5px; border-radius: 6px; font-size: 10px; font-weight: 500; }
 .rail-icon { display: flex; height: 36px; width: 40px; align-items: center; justify-content: center; border-radius: 8px; transition: background 150ms; }
 .rail-action:hover .rail-icon { background: #ffffff10; color: white; }

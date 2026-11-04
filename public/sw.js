@@ -1,4 +1,4 @@
-const CACHE_NAME = 'relay-v2';
+const CACHE_NAME = 'relay-v3';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',

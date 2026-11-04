@@ -122,7 +122,7 @@ export const EditChannelModal: React.FC<EditChannelModalProps> = ({
     return (
       <div
         ref={dialogRef}
-        className='fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#20252a]/45 p-4'
+        className='workspace-modal fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#20252a]/45 p-4'
         role='dialog'
         aria-modal='true'
         aria-labelledby='delete-channel-title'
@@ -188,7 +188,7 @@ export const EditChannelModal: React.FC<EditChannelModalProps> = ({
   return (
     <div
       ref={dialogRef}
-      className='fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#20252a]/45 p-4'
+      className='workspace-modal fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#20252a]/45 p-4'
       role='dialog'
       aria-modal='true'
       aria-labelledby='edit-channel-title'

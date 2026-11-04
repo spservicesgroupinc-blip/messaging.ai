@@ -24,10 +24,10 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className='relative z-10 shrink-0 border-b border-[#e5e7e5] bg-white'>
-      <div className='flex h-16 items-center justify-between gap-3 px-4 sm:px-6'>
-        <div className='flex min-w-0 flex-1 items-center gap-3'>
+      <div className='flex h-14 items-center justify-between gap-1 px-2 sm:h-16 sm:gap-3 sm:px-6'>
+        <div className='flex min-w-0 flex-1 items-center gap-1 sm:gap-3'>
           <button type='button' onClick={onToggleMobileSidebar} aria-label='Open navigation sidebar'
-            className='-ml-1 rounded-md p-1.5 text-[#64748b] hover:bg-[#f1f5f9] lg:hidden'>
+            className='flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-[#64748b] hover:bg-[#f1f5f9] lg:hidden'>
             <Menu aria-hidden='true' className='h-5 w-5' />
           </button>
           <div className='hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#e2e8e3] bg-[#f6f8f6] sm:flex'>
@@ -51,19 +51,19 @@ export const Header: React.FC<HeaderProps> = ({
             className='h-8 w-full rounded-md border border-[#cbd5e1] bg-[#f8fafc] pl-8 pr-3 text-xs text-[#475569] placeholder:text-[#94a3b8] focus:border-[#94a3b8] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2563eb]/10' />
         </div>
 
-        <div className='flex shrink-0 items-center gap-1.5'>
+        <div className='flex shrink-0 items-center gap-0 sm:gap-1.5'>
           <button type='button' aria-label={mobileSearchOpen ? 'Close message search' : 'Search channel messages'}
             aria-expanded={mobileSearchOpen} onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-            className={'rounded-md p-2 transition-colors md:hidden ' + (mobileSearchOpen ? 'bg-[#f1f5f9] text-[#2563eb]' : 'text-[#64748b] hover:bg-[#f1f5f9]')}>
+            className={'flex h-11 w-11 items-center justify-center rounded-md transition-colors md:hidden ' + (mobileSearchOpen ? 'bg-[#f1f5f9] text-[#2563eb]' : 'text-[#64748b] hover:bg-[#f1f5f9]')}>
             {mobileSearchOpen ? <X aria-hidden='true' className='h-4 w-4' /> : <Search aria-hidden='true' className='h-4 w-4' />}
           </button>
           <button type='button' onClick={onRefresh} disabled={syncing} aria-label={syncing ? 'Refreshing messages' : 'Refresh messages'} title='Refresh messages'
-            className='rounded-md p-2 text-[#64748b] transition-colors hover:bg-[#f1f5f9] disabled:cursor-wait'>
+            className='flex h-11 w-11 items-center justify-center rounded-md text-[#64748b] transition-colors hover:bg-[#f1f5f9] disabled:cursor-wait sm:h-8 sm:w-8'>
             <RefreshCw aria-hidden='true' className={'h-4 w-4 ' + (syncing ? 'animate-spin text-[#2563eb]' : '')} strokeWidth={1.75} />
           </button>
-          <div className='mx-1 h-5 w-px bg-[#e5e9e5]' aria-hidden='true' />
+          <div className='mx-1 hidden h-5 w-px bg-[#e5e9e5] sm:block' aria-hidden='true' />
           <button type='button' onClick={onToggleMembers} aria-label={'View ' + memberCount + ' channel members'} aria-pressed={isMembersDrawerOpen}
-            className={'flex h-8 items-center gap-2 rounded-md border px-2.5 text-xs font-medium transition-colors ' +
+            className={'flex h-11 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition-colors sm:h-8 sm:gap-2 sm:px-2.5 ' +
               (isMembersDrawerOpen ? 'border-[#cbd5e1] bg-[#f1f5f9] text-[#2563eb]' : 'border-[#e2e8f0] text-[#64748b] hover:bg-[#f8fafc]')}>
             <Users aria-hidden='true' className='h-4 w-4' strokeWidth={1.75} />
             <span className='tabular-nums'>{memberCount}</span><span className='hidden xl:inline'>members</span>

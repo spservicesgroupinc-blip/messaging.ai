@@ -82,7 +82,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
       role={isMobile ? 'dialog' : undefined}
       aria-modal={isMobile || undefined}
       aria-label="Message thread replies"
-      className="fixed inset-0 z-30 flex h-dvh w-full min-w-0 flex-col border-l border-[#e5e7e9] bg-white lg:static lg:h-full lg:w-[360px] lg:shrink-0 xl:w-[384px]"
+      className="workspace-drawer fixed inset-0 z-30 flex h-dvh w-full min-w-0 flex-col border-l border-[#e5e7e9] bg-white lg:static lg:h-full lg:w-[360px] lg:shrink-0 xl:w-[384px]"
     >
       {/* Header */}
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-[#e5e7e9] px-5">
@@ -105,7 +105,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
       </div>
 
       {/* Thread Stream */}
-      <div className="flex-1 space-y-4 overflow-y-auto p-4">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 [overflow-wrap:anywhere]">
         {/* Root Message */}
         <div className="border-b border-[#e5e7e9] pb-4">
           <div className="flex items-start gap-3">
@@ -161,7 +161,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
       </div>
 
       {/* Thread Reply Composer */}
-      <form onSubmit={handleSubmit} className="border-t border-[#e5e7e9] p-4 safe-area-bottom">
+      <form onSubmit={handleSubmit} className="shrink-0 border-t border-[#e5e7e9] p-4">
         <div className="flex items-center gap-2">
           <input
             type="text"

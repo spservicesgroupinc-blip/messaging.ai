@@ -42,7 +42,7 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, currentUser,
   );
 
   return (
-    <div className='pb-5'>
+    <div className='pb-5 [overflow-wrap:anywhere]'>
       {searchQuery.trim() ? (
         <div className='flex items-center gap-2 border-b border-[#e2e8f0] px-4 py-4 text-xs text-[#64748b] sm:px-6' role='status'>
           <Search className='h-3.5 w-3.5 shrink-0' /><span>{rootMessages.length} {rootMessages.length === 1 ? 'result' : 'results'} for <strong className='break-all font-medium text-[#353b40]'>“{searchQuery}”</strong></span>

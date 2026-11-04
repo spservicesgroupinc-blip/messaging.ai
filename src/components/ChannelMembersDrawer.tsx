@@ -101,7 +101,7 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
       role={isMobile ? 'dialog' : undefined}
       aria-modal={isMobile || undefined}
       aria-label="Channel members and access"
-      className="fixed inset-0 z-30 flex h-dvh w-full min-w-0 flex-col border-l border-[#e5e7e9] bg-white lg:static lg:h-full lg:w-80 lg:shrink-0"
+      className="workspace-drawer fixed inset-0 z-30 flex h-dvh w-full min-w-0 flex-col border-l border-[#e5e7e9] bg-white lg:static lg:h-full lg:w-80 lg:shrink-0"
     >
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-[#e5e7e9] px-5">
         <div className="flex items-center gap-2">
@@ -119,7 +119,7 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
         </button>
       </div>
 
-      <div className="flex-1 space-y-6 overflow-y-auto p-4">
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
         <div className="rounded-lg border border-[#e5e7e9] bg-[#f7f8f8] p-4">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-[#20252a]">
             {channel.is_private && <Lock className="h-3.5 w-3.5 shrink-0 text-slate-700" />}

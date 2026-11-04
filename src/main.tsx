@@ -1,6 +1,10 @@
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { observeAppViewport } from './utils/appViewport';
+
+const stopObservingViewport = observeAppViewport();
+if (import.meta.hot) import.meta.hot.dispose(stopObservingViewport);
 
 createRoot(document.getElementById('root')!).render(<App />);
 

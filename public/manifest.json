@@ -5,7 +5,6 @@
   "description": "Real-time team messaging workspace with private channels, threaded discussions, and persistent chat history.",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#0b1120",
   "scope": "/",

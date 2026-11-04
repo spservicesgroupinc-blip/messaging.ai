@@ -156,7 +156,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthenticated }) => {
 
   return (
 
-    <main className="grid min-h-dvh bg-white text-[#20252a] lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+    <main className="auth-screen grid min-h-dvh bg-white text-[#20252a] lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
 
       <section className="relative hidden flex-col overflow-hidden bg-[#1e293b] px-12 py-10 text-white lg:flex xl:px-20">
 
