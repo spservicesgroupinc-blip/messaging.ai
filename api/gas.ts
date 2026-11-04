@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 
 const APPS_SCRIPT_WEBAPP_URL =
   process.env.APPS_SCRIPT_WEBAPP_URL ||
-  'https://script.google.com/macros/s/AKfycbxbX8d3Rdd6GJaprM4fi9YbUlVX5VBYZb3Od7397NCHpd4C27OxoJu3zfWESt8wr4ocEw/exec';
+  'https://script.google.com/macros/s/AKfycbx5I-dG3ubD80dvc7kI0CjOqqs4QPQvzXzQSAKrZrsoqX_akSC4-5Dw-fd8A4ouHgmi/exec';
 
 interface SheetChannel {
   channel_id: string;
