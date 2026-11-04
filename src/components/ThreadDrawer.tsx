@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { MessageSquare, Send, X } from 'lucide-react';
 import { Avatar } from './ui/Avatar';
 import { Button } from './ui/Button';
 import {
   formatTimeShort,
-  getInitials,
   type EnrichedMessage,
 } from '../utils/sheetsProtocol';
 
@@ -23,6 +22,39 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
   onClose,
   onSendReply,
 }) => {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 1023px)').matches);
+  useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeRef.current?.focus();
+    const mobileMedia = window.matchMedia('(max-width: 1023px)');
+    const onViewportChange = () => {
+      setIsMobile(mobileMedia.matches);
+      if (mobileMedia.matches && !panelRef.current?.contains(document.activeElement)) closeRef.current?.focus();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCloseRef.current();
+      if (event.key !== 'Tab' || !mobileMedia.matches) return;
+      const panel = panelRef.current;
+      const controls = Array.from(panel?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), [tabindex="0"]') || []);
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (!panel?.contains(document.activeElement)) { event.preventDefault(); first?.focus(); }
+      else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    mobileMedia.addEventListener('change', onViewportChange);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      mobileMedia.removeEventListener('change', onViewportChange);
+      document.removeEventListener('keydown', onKeyDown);
+      previousFocus?.focus();
+    };
+  }, []);
+
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
 
@@ -46,23 +78,27 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
 
   return (
     <aside
+      ref={panelRef}
+      role={isMobile ? 'dialog' : undefined}
+      aria-modal={isMobile || undefined}
       aria-label="Message thread replies"
-      className="flex h-full w-96 shrink-0 flex-col border-l border-slate-200 bg-white shadow-sm"
+      className="fixed inset-0 z-30 flex h-dvh w-full min-w-0 flex-col border-l border-[#e5e7e9] bg-white lg:static lg:h-full lg:w-[360px] lg:shrink-0 xl:w-[384px]"
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3.5">
+      <div className="flex h-16 shrink-0 items-center justify-between border-b border-[#e5e7e9] px-5">
         <div className="flex items-center gap-2 min-w-0">
           <MessageSquare className="h-4 w-4 shrink-0 text-slate-600" />
           <div className="truncate">
-            <span className="text-sm font-semibold text-slate-900">Thread</span>
-            <span className="text-xs text-slate-500"> &middot; {channelDisplayName}</span>
+            <span className="text-sm font-semibold text-[#20252a]">Thread</span>
+            <span className="text-xs text-[#72777d]"> &middot; {channelDisplayName}</span>
           </div>
         </div>
         <button
           type="button"
           onClick={onClose}
+          ref={closeRef}
           aria-label="Close thread panel"
-          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+          className="rounded-lg p-1.5 text-[#72777d] transition-colors hover:bg-slate-100 hover:text-[#20252a]"
         >
           <X className="h-4 w-4" />
         </button>
@@ -71,32 +107,32 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
       {/* Thread Stream */}
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {/* Root Message */}
-        <div className="border-b border-slate-200 pb-4">
+        <div className="border-b border-[#e5e7e9] pb-4">
           <div className="flex items-start gap-3">
             <Avatar userName={rootMessage.user_name} size="md" className="h-8 w-8 shrink-0" />
             <div className="min-w-0 flex-1">
-              <div className="flex items-baseline gap-2 text-xs">
-                <span className="font-semibold text-slate-900">{rootMessage.user_name}</span>
+              <div className="flex flex-wrap items-baseline gap-x-2 text-xs">
+                <span className="font-semibold text-[#20252a]">{rootMessage.user_name}</span>
                 <span aria-hidden="true" className="text-slate-400">
                   &middot;
                 </span>
-                <span className="font-mono tabular-nums text-slate-500">
+                <span className="tabular-nums text-[#72777d]">
                   {formatTimeShort(rootMessage.created_at)}
                 </span>
               </div>
-              <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap text-slate-800">
+              <p className="mt-1 text-sm leading-relaxed break-words whitespace-pre-wrap text-[#363c40]">
                 {rootMessage.content}
               </p>
             </div>
           </div>
-          <div className="mt-3 text-xs font-medium text-slate-500 tabular-nums">
+          <div className="mt-3 text-xs font-medium text-[#72777d] tabular-nums">
             {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
           </div>
         </div>
 
         {/* Replies List */}
         {replies.length === 0 ? (
-          <p className="py-4 text-center text-xs text-slate-500">
+          <p className="py-4 text-center text-xs text-[#72777d]">
             No replies in this thread yet. Reply below to start the conversation.
           </p>
         ) : (
@@ -105,16 +141,16 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
               <div key={reply.message_id} className="flex items-start gap-3">
                 <Avatar userName={reply.user_name} size="sm" className="h-7 w-7 shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2 text-xs">
-                    <span className="font-semibold text-slate-900">{reply.user_name}</span>
+                  <div className="flex flex-wrap items-baseline gap-x-2 text-xs">
+                    <span className="font-semibold text-[#20252a]">{reply.user_name}</span>
                     <span aria-hidden="true" className="text-slate-400">
                       &middot;
                     </span>
-                    <span className="font-mono tabular-nums text-slate-500">
+                    <span className="tabular-nums text-[#72777d]">
                       {formatTimeShort(reply.created_at)}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap text-slate-800">
+                  <p className="mt-1 text-sm leading-relaxed break-words whitespace-pre-wrap text-[#363c40]">
                     {reply.content}
                   </p>
                 </div>
@@ -125,7 +161,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
       </div>
 
       {/* Thread Reply Composer */}
-      <form onSubmit={handleSubmit} className="border-t border-slate-200 p-3.5">
+      <form onSubmit={handleSubmit} className="border-t border-[#e5e7e9] p-4 safe-area-bottom">
         <div className="flex items-center gap-2">
           <input
             type="text"
@@ -133,7 +169,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             placeholder="Reply in thread..."
-            className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-1 focus:ring-blue-600/20 focus:outline-none"
+            className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-[#20252a] placeholder:text-[#72777d] focus:border-[#217a5b] focus:ring-1 focus:ring-[#217a5b]/20 focus:outline-none"
           />
           <Button
             type="submit"

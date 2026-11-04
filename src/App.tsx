@@ -3,6 +3,7 @@ import { RefreshCw } from 'lucide-react';
 import { AuthView } from './components/AuthView';
 import { ChannelMembersDrawer } from './components/ChannelMembersDrawer';
 import { CreateChannelModal } from './components/CreateChannelModal';
+import { EditChannelModal } from './components/EditChannelModal';
 import { ThreadDrawer } from './components/ThreadDrawer';
 import { ChannelItem } from './components/ChannelItem';
 import { Sidebar } from './components/Sidebar';
@@ -11,7 +12,7 @@ import { MessageItem } from './components/MessageItem';
 import { MessageList } from './components/MessageList';
 import { Composer } from './components/Composer';
 import { OfflineIndicator } from './components/OfflineIndicator';
-import { PushNotificationBadge } from './components/ui/PushNotificationBadge';
+import { WorkspaceShell } from './components/WorkspaceShell';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import {
   callSheetsBackend,
@@ -55,6 +56,10 @@ function AppContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateChannelOpen, setIsCreateChannelOpen] = useState(false);
   const [createChannelDefaultPrivate, setCreateChannelDefaultPrivate] = useState(false);
+  const [channelModalTarget, setChannelModalTarget] = useState<{
+    channel: SheetChannel;
+    mode: 'edit' | 'delete';
+  } | null>(null);
   const [isMembersDrawerOpen, setIsMembersDrawerOpen] = useState(false);
   const [activeThreadMessageId, setActiveThreadMessageId] = useState<string | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -249,13 +254,14 @@ function AppContent() {
     }
   };
 
-  const handleSaveEditedMessage = async (messageId: string) => {
-    if (!currentUser || !editingContent.trim()) return;
+  const handleSaveEditedMessage = async (messageId: string, nextContent?: string) => {
+    const finalContent = (nextContent ?? editingContent).trim();
+    if (!currentUser || !finalContent) return;
     const res = await callSheetsBackend({
       action: 'editMessage',
       userId: currentUser.user_id,
       messageId,
-      content: editingContent.trim(),
+      content: finalContent,
     });
     if (res.ok && res.messages) {
       setMessages(res.messages);
@@ -315,6 +321,67 @@ function AppContent() {
       if (res.channels) setChannels(res.channels);
       if (res.memberships) setMemberships(res.memberships);
       setMessages([]);
+      return { ok: true };
+    }
+    return { ok: false, error: res.error };
+  };
+
+  const handleEditChannel = async (params: {
+    channelId: string;
+    name: string;
+    description: string;
+    isPrivate: boolean;
+  }) => {
+    if (!currentUser) return { ok: false, error: 'Not signed in' };
+    const res = await callSheetsBackend({
+      action: 'editChannel',
+      userId: currentUser.user_id,
+      channelId: params.channelId,
+      name: params.name,
+      description: params.description,
+      isPrivate: params.isPrivate,
+    });
+
+    if (res.ok) {
+      if (res.channels) {
+        setChannels(res.channels);
+      } else if (res.channel) {
+        setChannels((prev) =>
+          prev.map((c) => (c.channel_id === res.channel!.channel_id ? res.channel! : c))
+        );
+      }
+      if (res.memberships) setMemberships(res.memberships);
+      return { ok: true };
+    }
+    return { ok: false, error: res.error };
+  };
+
+  const handleDeleteChannel = async (channelId: string) => {
+    if (!currentUser) return { ok: false, error: 'Not signed in' };
+    const res = await callSheetsBackend({
+      action: 'deleteChannel',
+      userId: currentUser.user_id,
+      channelId,
+    });
+
+    if (res.ok) {
+      const nextChannels = res.channels || channels.filter((c) => c.channel_id !== channelId);
+      setChannels(nextChannels);
+      if (res.memberships) setMemberships(res.memberships);
+
+      if (activeChannelIdRef.current === channelId) {
+        const fallbackChannel =
+          nextChannels.find((c) => !c.dm_participants) || nextChannels[0];
+        const nextActiveId = fallbackChannel?.channel_id || '';
+        activeChannelIdRef.current = nextActiveId;
+        setActiveChannelId(nextActiveId);
+        saveActiveChannelId(nextActiveId);
+        if (nextActiveId) {
+          void handleSelectChannel(nextActiveId);
+        } else {
+          setMessages([]);
+        }
+      }
       return { ok: true };
     }
     return { ok: false, error: res.error };
@@ -447,7 +514,17 @@ function AppContent() {
   }
 
   return (
-    <div className='flex h-screen w-screen overflow-hidden bg-white text-slate-900 safe-area-bottom'>
+    <WorkspaceShell
+      currentUser={currentUser}
+      isDirectMessage={Boolean(activeChannel?.dm_participants)}
+      onHome={() => { const home = publicChannels[0]; if (home) void handleSelectChannel(home.channel_id); }}
+      onDirectMessages={() => {
+        const partner = workspaceUsers.find(user => user.user_id !== currentUser.user_id) || currentUser;
+        void handleOpenDirectMessage(partner.user_id);
+      }}
+      onMembers={() => { setActiveThreadMessageId(null); setIsMembersDrawerOpen(prev => !prev); }}
+      onCreateChannel={() => { setCreateChannelDefaultPrivate(false); setIsCreateChannelOpen(true); }}
+    >
       <OfflineIndicator />
 
       <Sidebar
@@ -455,13 +532,29 @@ function AppContent() {
         workspaceUsers={workspaceUsers}
         publicChannels={publicChannels}
         privateChannels={privateChannels}
+        directMessageChannels={channels.filter(channel => Boolean(channel.dm_participants))}
         activeChannelId={activeChannelId}
         mobileSidebarOpen={mobileSidebarOpen}
         onSelectChannel={handleSelectChannel}
         onOpenDirectMessage={handleOpenDirectMessage}
         onCreateChannel={(isPrivate) => {
+          setMobileSidebarOpen(false);
           setCreateChannelDefaultPrivate(isPrivate);
           setIsCreateChannelOpen(true);
+        }}
+        onEditChannel={(channel) => {
+          setMobileSidebarOpen(false);
+          setChannelModalTarget({ channel, mode: 'edit' });
+        }}
+        onDeleteChannel={(channel) => {
+          setMobileSidebarOpen(false);
+          setChannelModalTarget({ channel, mode: 'delete' });
+        }}
+        onManageChannelMembers={(channel) => {
+          setMobileSidebarOpen(false);
+          void handleSelectChannel(channel.channel_id);
+          setActiveThreadMessageId(null);
+          setIsMembersDrawerOpen(true);
         }}
         onSignOut={handleSignOut}
         onToggleMobileSidebar={() => setMobileSidebarOpen((prev) => !prev)}
@@ -477,13 +570,13 @@ function AppContent() {
           onRefresh={() => syncWorkspace(currentUser.user_id, activeChannelId)}
           syncing={syncing}
           isMembersDrawerOpen={isMembersDrawerOpen}
-          onToggleMembers={() => setIsMembersDrawerOpen((prev) => !prev)}
+          onToggleMembers={() => { setActiveThreadMessageId(null); setIsMembersDrawerOpen((prev) => !prev); }}
           onToggleMobileSidebar={() => setMobileSidebarOpen((prev) => !prev)}
         />
 
         <div className='flex min-h-0 flex-1 overflow-hidden'>
-          <main className='flex min-w-0 flex-1 flex-col bg-white'>
-            <div className='flex-1 overflow-y-auto px-4 py-6 sm:px-6 safe-area-bottom'>
+          <main id='conversation' tabIndex={-1} className='flex min-w-0 flex-1 flex-col bg-white outline-none'>
+            <div className='min-h-0 flex-1 overflow-y-auto overscroll-contain'>
               <MessageList
                 messages={rootMessages}
                 currentUser={currentUser}
@@ -499,7 +592,7 @@ function AppContent() {
                 }}
                 onSave={(id, content) => {
                   setEditingContent(content);
-                  handleSaveEditedMessage(id);
+                  void handleSaveEditedMessage(id, content);
                 }}
                 onCancelEdit={() => {
                   setEditingMessageId(null);
@@ -554,7 +647,7 @@ function AppContent() {
         </div>
       </div>
 
-      <PushNotificationBadge currentUserId={currentUser.user_id} />
+
 
       <CreateChannelModal
         isOpen={isCreateChannelOpen}
@@ -564,7 +657,15 @@ function AppContent() {
         currentUserId={currentUser.user_id}
         onCreateChannel={handleCreateChannel}
       />
-    </div>
+
+      <EditChannelModal
+        channel={channelModalTarget?.channel ?? null}
+        mode={channelModalTarget?.mode ?? 'edit'}
+        onClose={() => setChannelModalTarget(null)}
+        onEditChannel={handleEditChannel}
+        onDeleteChannel={handleDeleteChannel}
+      />
+    </WorkspaceShell>
   );
 }
 
@@ -575,3 +676,4 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+

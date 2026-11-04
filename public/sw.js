@@ -1,4 +1,4 @@
-const CACHE_NAME = 'relay-v1';
+const CACHE_NAME = 'relay-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -6,9 +6,6 @@ const STATIC_ASSETS = [
   '/icons/icon-512.png',
   '/icons/icon-maskable-512.png',
 ];
-
-const API_CACHE_NAME = 'relay-api-v1';
-const API_PREFIX = '/api/';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -21,7 +18,9 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.filter((name) => name !== CACHE_NAME && name !== API_CACHE_NAME).map((name) => caches.delete(name))
+        cacheNames
+          .filter((name) => name !== CACHE_NAME)
+          .map((name) => caches.delete(name))
       );
     })
   );
@@ -32,19 +31,32 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  if (url.pathname.startsWith(API_PREFIX)) {
+  // Never cache non-GET requests or /api/* endpoints (such as POST /api/gas or SSE /api/events)
+  if (
+    request.method !== 'GET' ||
+    url.origin !== self.location.origin ||
+    url.pathname.startsWith('/api/')
+  ) {
+    return;
+  }
+
+  // Navigation requests: network-first with cached shell fallback
+  if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const cloned = response.clone();
-          caches.open(API_CACHE_NAME).then((cache) => cache.put(request, cloned));
+          if (response.status === 200) {
+            const cloned = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, cloned));
+          }
           return response;
         })
-        .catch(() => caches.match(request))
+        .catch(() => caches.match('/') || caches.match(request))
     );
     return;
   }
 
+  // Static assets: cache-first with background update
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) return cachedResponse;

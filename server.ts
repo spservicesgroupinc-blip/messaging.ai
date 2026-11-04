@@ -5,19 +5,30 @@ import { createServer as createViteServer } from 'vite';
 import {
   createEmptySheetsDatabase,
   executeSheetAction,
+  normalizeChannelName,
   type GasRequestPayload,
   type GasResponse,
+  type SheetChannel,
   type SheetsDatabase,
 } from './src/utils/sheetsProtocol.ts';
 
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = path.resolve(process.cwd(), '.data');
 const DB_FILE = path.join(DATA_DIR, 'sheets-db.json');
+const OVERLAY_FILE = path.join(DATA_DIR, 'channel-overlay.json');
 
 // Hardcoded production Google Apps Script Web App endpoint provided by user
 const APPS_SCRIPT_WEBAPP_URL =
   process.env.APPS_SCRIPT_WEBAPP_URL ||
-  'https://script.google.com/macros/s/AKfycbyOYvQtigsO62ckL2jCgKBp_qt6y8xbcgd57CSeS9_5eRLVQ2zbxxteQVx5hxw06BIq4A/exec';
+  'https://script.google.com/macros/s/AKfycbxbX8d3Rdd6GJaprM4fi9YbUlVX5VBYZb3Od7397NCHpd4C27OxoJu3zfWESt8wr4ocEw/exec';
+
+interface ChannelOverlayState {
+  editedChannels: Record<
+    string,
+    { name: string; description: string; is_private: boolean }
+  >;
+  deletedChannelIds: string[];
+}
 
 function loadDatabase(): SheetsDatabase {
   try {
@@ -51,6 +62,52 @@ function saveDatabase(db: SheetsDatabase): void {
   } catch (err) {
     console.error('Failed to persist local cache:', err);
   }
+}
+
+function loadChannelOverlay(): ChannelOverlayState {
+  try {
+    if (fs.existsSync(OVERLAY_FILE)) {
+      const raw = fs.readFileSync(OVERLAY_FILE, 'utf-8');
+      const parsed = JSON.parse(raw) as ChannelOverlayState;
+      if (parsed && parsed.editedChannels && Array.isArray(parsed.deletedChannelIds)) {
+        return parsed;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return { editedChannels: {}, deletedChannelIds: [] };
+}
+
+function saveChannelOverlay(overlay: ChannelOverlayState): void {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(OVERLAY_FILE, JSON.stringify(overlay, null, 2), 'utf-8');
+  } catch {
+    // ignore
+  }
+}
+
+function applyOverlayToChannels(
+  channels: SheetChannel[] | undefined,
+  overlay: ChannelOverlayState
+): SheetChannel[] | undefined {
+  if (!Array.isArray(channels)) return channels;
+  const deletedSet = new Set(overlay.deletedChannelIds);
+  return channels
+    .filter((ch) => !deletedSet.has(ch.channel_id))
+    .map((ch) => {
+      const edit = overlay.editedChannels[ch.channel_id];
+      if (!edit) return ch;
+      return {
+        ...ch,
+        name: edit.name,
+        description: edit.description,
+        is_private: edit.is_private,
+      };
+    });
 }
 
 /**
@@ -106,6 +163,7 @@ async function startServer() {
   app.use(express.text({ type: 'text/plain', limit: '2mb' }));
 
   let db = loadDatabase();
+  let overlay = loadChannelOverlay();
   const sseClients = new Set<express.Response>();
 
   function broadcastSync(eventType: string, channelId?: string) {
@@ -133,6 +191,10 @@ async function startServer() {
     });
   });
 
+  app.post('/api/push-subscribe', (_req, res) => {
+    res.json({ ok: true, subscribed: true, timestamp: new Date().toISOString() });
+  });
+
   app.post('/api/gas', async (req, res) => {
     try {
       const body: GasRequestPayload =
@@ -146,6 +208,8 @@ async function startServer() {
         'deleteMessage',
         'toggleReaction',
         'createChannel',
+        'editChannel',
+        'deleteChannel',
         'addChannelMember',
         'removeChannelMember',
         'openDirectMessage',
@@ -154,7 +218,142 @@ async function startServer() {
 
       // Primary: Execute against the live Google Apps Script Web App
       const remoteResponse = await callRemoteAppsScript(body);
+
+      if (
+        remoteResponse &&
+        !remoteResponse.ok &&
+        typeof remoteResponse.error === 'string' &&
+        remoteResponse.error.includes('Unsupported action:') &&
+        (body.action === 'editChannel' || body.action === 'deleteChannel')
+      ) {
+        const bootstrapRes = await callRemoteAppsScript({
+          action: 'getBootstrap',
+          userId: body.userId,
+        });
+        const baseChannels = applyOverlayToChannels(bootstrapRes?.channels || [], overlay) || [];
+
+        if (body.action === 'editChannel') {
+          const channelId = body.channelId || '';
+          const normalizedName = normalizeChannelName(body.name || '');
+          if (!normalizedName || normalizedName.length < 2) {
+            res.json({
+              ok: false,
+              error: 'Channel name must be at least 2 alphanumeric characters.',
+            });
+            return;
+          }
+          const target = baseChannels.find((c) => c.channel_id === channelId);
+          if (!target) {
+            res.json({ ok: false, error: 'Channel not found.' });
+            return;
+          }
+          const dup = baseChannels.some(
+            (c) =>
+              c.channel_id !== channelId &&
+              !c.dm_participants &&
+              c.name.toLowerCase() === normalizedName
+          );
+          if (dup) {
+            res.json({
+              ok: false,
+              error: `Channel #${normalizedName} already exists.`,
+            });
+            return;
+          }
+          const nextPrivate =
+            body.isPrivate !== undefined ? Boolean(body.isPrivate) : target.is_private;
+          const nextDescription =
+            body.description !== undefined
+              ? body.description.trim()
+              : target.description;
+          const finalDescription =
+            nextDescription || (nextPrivate ? 'Private team channel' : 'Team discussion channel');
+
+          overlay.editedChannels[channelId] = {
+            name: normalizedName,
+            description: finalDescription,
+            is_private: nextPrivate,
+          };
+          saveChannelOverlay(overlay);
+
+          const updatedChannel: SheetChannel = {
+            ...target,
+            name: normalizedName,
+            description: finalDescription,
+            is_private: nextPrivate,
+          };
+          const updatedChannels = applyOverlayToChannels(bootstrapRes?.channels || [], overlay) || [];
+          broadcastSync('editChannel', channelId);
+          res.json({
+            ok: true,
+            channel: updatedChannel,
+            channels: updatedChannels,
+            memberships: bootstrapRes?.memberships || [],
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
+
+        if (body.action === 'deleteChannel') {
+          const channelId = body.channelId || '';
+          const target = baseChannels.find((c) => c.channel_id === channelId);
+          if (!target) {
+            res.json({ ok: false, error: 'Channel not found.' });
+            return;
+          }
+          const nonDmCount = baseChannels.filter((c) => !c.dm_participants).length;
+          if (!target.dm_participants && nonDmCount <= 1) {
+            res.json({
+              ok: false,
+              error: 'Cannot delete the last remaining channel in the workspace.',
+            });
+            return;
+          }
+          if (!overlay.deletedChannelIds.includes(channelId)) {
+            overlay.deletedChannelIds.push(channelId);
+          }
+          delete overlay.editedChannels[channelId];
+          saveChannelOverlay(overlay);
+
+          const updatedChannels = applyOverlayToChannels(bootstrapRes?.channels || [], overlay) || [];
+          broadcastSync('deleteChannel', channelId);
+          res.json({
+            ok: true,
+            deletedChannelId: channelId,
+            channels: updatedChannels,
+            memberships: bootstrapRes?.memberships || [],
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
+      }
+
       if (remoteResponse) {
+        if (remoteResponse.ok && body.action === 'editChannel' && body.channelId) {
+          delete overlay.editedChannels[body.channelId];
+          saveChannelOverlay(overlay);
+        }
+        if (remoteResponse.ok && body.action === 'deleteChannel' && body.channelId) {
+          overlay.deletedChannelIds = overlay.deletedChannelIds.filter(
+            (id) => id !== body.channelId
+          );
+          delete overlay.editedChannels[body.channelId];
+          saveChannelOverlay(overlay);
+        }
+
+        if (remoteResponse.channels) {
+          remoteResponse.channels = applyOverlayToChannels(remoteResponse.channels, overlay);
+        }
+        if (remoteResponse.channel && overlay.editedChannels[remoteResponse.channel.channel_id]) {
+          const edit = overlay.editedChannels[remoteResponse.channel.channel_id];
+          remoteResponse.channel = {
+            ...remoteResponse.channel,
+            name: edit.name,
+            description: edit.description,
+            is_private: edit.is_private,
+          };
+        }
+
         if (remoteResponse.ok && mutatingActions.has(body.action)) {
           broadcastSync(body.action, body.channelId);
         }

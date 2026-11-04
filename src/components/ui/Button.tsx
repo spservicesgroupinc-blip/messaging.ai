@@ -2,9 +2,9 @@ import React from 'react';
 
 const VARIANT_CLASSES: Record<string, string> = {
   primary:
-    'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400 transition-colors',
+    'bg-[#217a5b] text-white hover:bg-[#196348] disabled:bg-[#217a5b] transition-colors',
   secondary:
-    'bg-white border border-slate-300 text-slate-900 hover:bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 transition-colors',
+    'bg-white border border-[#d8dcde] text-[#20252a] hover:bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 transition-colors',
   ghost:
     'hover:bg-slate-100 text-slate-700 disabled:text-slate-400 transition-colors',
   danger:
@@ -35,7 +35,7 @@ export const Button: React.FC<ButtonProps> = ({
     <button
       type="button"
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-95 transition-transform outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className ?? ''}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#217a5b] focus-visible:ring-offset-2 ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className ?? ''}`}
       {...props}
     >
       {loading && (

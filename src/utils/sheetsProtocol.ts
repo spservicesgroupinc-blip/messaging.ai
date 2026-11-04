@@ -71,6 +71,8 @@ export interface GasRequestPayload {
     | 'deleteMessage'
     | 'toggleReaction'
     | 'createChannel'
+    | 'editChannel'
+    | 'deleteChannel'
     | 'addChannelMember'
     | 'removeChannelMember'
     | 'openDirectMessage'
@@ -105,6 +107,7 @@ export interface GasResponse {
   memberships?: SheetChannelMember[];
   messages?: EnrichedMessage[];
   channel?: SheetChannel;
+  deletedChannelId?: string;
   message?: EnrichedMessage;
   sheets?: {
     Users: PublicUser[];
@@ -757,6 +760,136 @@ export function executeSheetAction(
         response: {
           ok: true,
           channel: newChannel,
+          channels: accessibleChannels,
+          memberships: db.ChannelMembers,
+          timestamp: nowIso,
+        },
+      };
+    }
+
+    case 'editChannel': {
+      const userId = payload.userId || '';
+      const channelId = payload.channelId || '';
+      const normalizedName = normalizeChannelName(payload.name || '');
+
+      if (!normalizedName || normalizedName.length < 2) {
+        return {
+          db,
+          response: {
+            ok: false,
+            error: 'Channel name must be at least 2 alphanumeric characters.',
+          },
+        };
+      }
+
+      const targetIdx = db.Channels.findIndex((c) => c.channel_id === channelId);
+      if (targetIdx === -1) {
+        return { db, response: { ok: false, error: 'Channel not found.' } };
+      }
+
+      const targetChannel = db.Channels[targetIdx];
+      if (!canUserAccessChannel(targetChannel, db.ChannelMembers, userId)) {
+        return { db, response: { ok: false, error: 'Access denied to edit this channel.' } };
+      }
+
+      const duplicate = db.Channels.some(
+        (c, idx) =>
+          idx !== targetIdx &&
+          !c.dm_participants &&
+          c.name.toLowerCase() === normalizedName
+      );
+      if (duplicate) {
+        return {
+          db,
+          response: {
+            ok: false,
+            error: `Channel #${normalizedName} already exists.`,
+          },
+        };
+      }
+
+      const nextPrivate =
+        payload.isPrivate !== undefined ? Boolean(payload.isPrivate) : targetChannel.is_private;
+      const nextDescription =
+        payload.description !== undefined
+          ? payload.description.trim()
+          : targetChannel.description;
+
+      const updatedChannel: SheetChannel = {
+        ...targetChannel,
+        name: normalizedName,
+        description:
+          nextDescription || (nextPrivate ? 'Private team channel' : 'Team discussion channel'),
+        is_private: nextPrivate,
+      };
+      db.Channels[targetIdx] = updatedChannel;
+
+      if (nextPrivate && userId) {
+        const hasMembership = db.ChannelMembers.some(
+          (m) => m.channel_id === channelId && m.user_id === userId
+        );
+        if (!hasMembership) {
+          db.ChannelMembers.push({
+            membership_id: generateId('mem'),
+            channel_id: channelId,
+            user_id: userId,
+            role: 'owner',
+            joined_at: nowIso,
+          });
+        }
+      }
+
+      const accessibleChannels = db.Channels.filter((c) =>
+        canUserAccessChannel(c, db.ChannelMembers, userId)
+      );
+
+      return {
+        db,
+        response: {
+          ok: true,
+          channel: updatedChannel,
+          channels: accessibleChannels,
+          memberships: db.ChannelMembers,
+          timestamp: nowIso,
+        },
+      };
+    }
+
+    case 'deleteChannel': {
+      const userId = payload.userId || '';
+      const channelId = payload.channelId || '';
+      const targetChannel = db.Channels.find((c) => c.channel_id === channelId);
+      if (!targetChannel) {
+        return { db, response: { ok: false, error: 'Channel not found.' } };
+      }
+      if (!canUserAccessChannel(targetChannel, db.ChannelMembers, userId)) {
+        return { db, response: { ok: false, error: 'Access denied to delete this channel.' } };
+      }
+
+      const nonDmChannels = db.Channels.filter((c) => !c.dm_participants);
+      if (!targetChannel.dm_participants && nonDmChannels.length <= 1) {
+        return {
+          db,
+          response: {
+            ok: false,
+            error: 'Cannot delete the last remaining channel in the workspace.',
+          },
+        };
+      }
+
+      db.Channels = db.Channels.filter((c) => c.channel_id !== channelId);
+      db.ChannelMembers = db.ChannelMembers.filter((m) => m.channel_id !== channelId);
+      db.Messages = db.Messages.filter((m) => m.channel_id !== channelId);
+
+      const accessibleChannels = db.Channels.filter((c) =>
+        canUserAccessChannel(c, db.ChannelMembers, userId)
+      );
+
+      return {
+        db,
+        response: {
+          ok: true,
+          deletedChannelId: channelId,
           channels: accessibleChannels,
           memberships: db.ChannelMembers,
           timestamp: nowIso,

@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Lock, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import { Avatar } from './ui/Avatar';
 import { Button } from './ui/Button';
 import {
-  getInitials,
   type PublicUser,
   type SheetChannel,
   type SheetChannelMember,
@@ -28,6 +27,39 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
   onAddMember,
   onRemoveMember,
 }) => {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 1023px)').matches);
+  useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeRef.current?.focus();
+    const mobileMedia = window.matchMedia('(max-width: 1023px)');
+    const onViewportChange = () => {
+      setIsMobile(mobileMedia.matches);
+      if (mobileMedia.matches && !panelRef.current?.contains(document.activeElement)) closeRef.current?.focus();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCloseRef.current();
+      if (event.key !== 'Tab' || !mobileMedia.matches) return;
+      const panel = panelRef.current;
+      const controls = Array.from(panel?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), [tabindex="0"]') || []);
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (!panel?.contains(document.activeElement)) { event.preventDefault(); first?.focus(); }
+      else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    mobileMedia.addEventListener('change', onViewportChange);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      mobileMedia.removeEventListener('change', onViewportChange);
+      document.removeEventListener('keydown', onKeyDown);
+      previousFocus?.focus();
+    };
+  }, []);
+
   const [inviteEmail, setInviteEmail] = useState('');
   const [error, setError] = useState('');
   const [adding, setAdding] = useState(false);
@@ -65,29 +97,33 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
 
   return (
     <aside
+      ref={panelRef}
+      role={isMobile ? 'dialog' : undefined}
+      aria-modal={isMobile || undefined}
       aria-label="Channel members and access"
-      className="flex h-full w-80 shrink-0 flex-col border-l border-slate-200 bg-white shadow-sm"
+      className="fixed inset-0 z-30 flex h-dvh w-full min-w-0 flex-col border-l border-[#e5e7e9] bg-white lg:static lg:h-full lg:w-80 lg:shrink-0"
     >
-      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3.5">
+      <div className="flex h-16 shrink-0 items-center justify-between border-b border-[#e5e7e9] px-5">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 shrink-0 text-slate-600" />
-          <h2 className="text-sm font-semibold text-slate-900">Channel Access</h2>
+          <h2 className="text-sm font-semibold text-[#20252a]">Channel members</h2>
         </div>
         <button
           type="button"
           onClick={onClose}
+          ref={closeRef}
           aria-label="Close channel access panel"
-          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+          className="rounded-lg p-1.5 text-[#72777d] transition-colors hover:bg-slate-100 hover:text-[#20252a]"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
       <div className="flex-1 space-y-6 overflow-y-auto p-4">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-900">
+        <div className="rounded-lg border border-[#e5e7e9] bg-[#f7f8f8] p-4">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-[#20252a]">
             {channel.is_private && <Lock className="h-3.5 w-3.5 shrink-0 text-slate-700" />}
-            <span>{channel.is_private ? 'Private Channel' : 'Public Workspace Channel'}</span>
+            <span>{channel.is_private ? 'Private channel' : 'Public channel'}</span>
           </div>
           <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
             {channel.is_private
@@ -98,7 +134,7 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
 
         {channel.is_private && !channel.dm_participants && (
           <div className="space-y-3">
-            <h3 className="text-xs font-semibold text-slate-800">Add Member to Private Channel</h3>
+            <h3 className="text-xs font-semibold text-slate-800">Add a teammate</h3>
             <form onSubmit={handleInviteSubmit} className="flex gap-2">
               <input
                 type="email"
@@ -106,7 +142,7 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="teammate@company.com"
-                className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:ring-1 focus:ring-blue-600/20 focus:outline-none"
+                className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-[#20252a] placeholder:text-[#72777d] focus:border-[#217a5b] focus:ring-1 focus:ring-[#217a5b]/20 focus:outline-none"
               />
               <Button
                 type="submit"
@@ -122,17 +158,17 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
 
             {nonMembers.length > 0 && (
               <div className="space-y-1 pt-1">
-                <p className="text-xs text-slate-500">Quick add registered teammates:</p>
+                <p className="text-xs text-[#72777d]">Quick add registered teammates:</p>
                 {nonMembers.map((u) => (
                   <div
                     key={u.user_id}
-                    className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2 text-xs"
+                    className="flex items-center justify-between rounded-md border border-[#e5e7e9] px-3 py-2 text-xs"
                   >
                     <div className="flex items-center gap-2 truncate pr-2">
                       <Avatar userName={u.full_name} size="sm" className="h-6 w-6" />
                       <div className="min-w-0">
-                        <span className="font-medium text-slate-900 block">{u.full_name}</span>
-                        <span className="block truncate text-slate-500 text-[11px]">{u.email}</span>
+                        <span className="font-medium text-[#20252a] block">{u.full_name}</span>
+                        <span className="block truncate text-[#72777d] text-[11px]">{u.email}</span>
                       </div>
                     </div>
                     <Button
@@ -141,7 +177,7 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
                       size="sm"
                       onClick={() => onAddMember(u.email)}
                     >
-                      Grant Access
+                      Add
                     </Button>
                   </div>
                 ))}
@@ -158,11 +194,11 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
 
         <div className="space-y-2.5">
           <div className="flex items-center justify-between text-xs font-semibold text-slate-800">
-            <span>Authorized Members</span>
-            <span className="font-mono tabular-nums text-slate-500">{members.length}</span>
+            <span>Members</span>
+            <span className="tabular-nums text-[#72777d]">{members.length}</span>
           </div>
 
-          <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+          <div className="divide-y divide-slate-100 rounded-lg border border-[#e5e7e9]">
             {members.map((member) => {
               const isCreator = channel.created_by === member.user_id;
               return (
@@ -173,11 +209,11 @@ export const ChannelMembersDrawer: React.FC<ChannelMembersDrawerProps> = ({
                   <div className="flex min-w-0 items-center gap-3">
                     <Avatar userName={member.full_name} size="md" className="h-8 w-8 shrink-0" />
                     <div className="min-w-0">
-                      <div className="truncate text-xs font-semibold text-slate-900">
+                      <div className="truncate text-xs font-semibold text-[#20252a]">
                         {member.full_name}
                         {member.user_id === currentUserId ? ' (you)' : ''}
                       </div>
-                      <div className="truncate text-[11px] text-slate-500">
+                      <div className="truncate text-[11px] text-[#72777d]">
                         {member.role_title} &middot; {isCreator ? 'Owner' : 'Member'}
                       </div>
                     </div>

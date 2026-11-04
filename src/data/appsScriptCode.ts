@@ -1,31 +1,11 @@
+// @ts-nocheck
 /**
- * Complete, production-ready Google Apps Script (Code.gs) for Relay Workspace.
- * Paste this into Extensions -> Apps Script inside any Google Sheet and deploy as a Web App.
- */
-export const APPS_SCRIPT_CODE_GS = `/**
  * ============================================================================
- * RELAY WORKSPACE — GOOGLE APPS SCRIPT + GOOGLE SHEETS SERVERLESS BACKEND
- * File: Code.gs
+ * RELAY WORKSPACE — GOOGLE APPS SCRIPT BACKEND (Code.gs)
  * ============================================================================
- *
- * SETUP INSTRUCTIONS:
- * 1. Create a new Google Sheet (https://sheets.new)
- * 2. Open Extensions -> Apps Script
- * 3. Replace the contents of Code.gs with this entire script and click Save (Ctrl+S)
- * 4. Click "Deploy" -> "New deployment"
- * 5. Select type: "Web app"
- *    - Description: "Relay Messaging Backend v1"
- *    - Execute as: "Me"
- *    - Who has access: "Anyone"
- * 6. Click "Deploy", authorize access, and copy the Web App URL (ends with /exec)
- * 7. Paste the Web App URL into the Relay Workspace Backend Configuration dialog.
- *
- * AUTOMATIC SHEET SCHEMA:
- * On first request, this script automatically creates and formats 4 sheets:
- * - Users          (user_id, email, password_hash, full_name, display_name, role_title, status_text, created_at, last_seen_at)
- * - Channels       (channel_id, name, description, is_private, created_by, created_at, dm_participants)
- * - ChannelMembers (membership_id, channel_id, user_id, role, joined_at)
- * - Messages       (message_id, channel_id, user_id, user_name, user_role, content, parent_message_id, reactions_json, created_at, updated_at)
+ * Copy and paste this entire file directly into Extensions -> Apps Script
+ * inside your Google Sheet, click Save, and Deploy -> Manage deployments ->
+ * Edit -> New version -> Deploy as Web App (Execute as: Me, Access: Anyone).
  */
 
 var SHEET_SCHEMAS = {
@@ -157,6 +137,14 @@ function handleRequest(payload) {
 
     if (action === 'createChannel') {
       return handleCreateChannel(ss, payload, nowIso);
+    }
+
+    if (action === 'editChannel') {
+      return handleEditChannel(ss, payload, nowIso);
+    }
+
+    if (action === 'deleteChannel') {
+      return handleDeleteChannel(ss, payload, nowIso);
     }
 
     if (action === 'addChannelMember') {
@@ -393,7 +381,7 @@ function handleSignup(ss, payload, nowIso) {
   var users = readTable(ss, 'Users');
   for (var i = 0; i < users.length; i++) {
     if (String(users[i].email).toLowerCase() === email) {
-      return jsonResponse({ ok: false, error: 'An account with this email already exists in the Users sheet.' });
+      return jsonResponse({ ok: false, error: 'An account with this email already exists.' });
     }
   }
 
@@ -480,7 +468,7 @@ function handleGetBootstrap(ss, payload, nowIso) {
       break;
     }
   }
-  if (!currentUser) return jsonResponse({ ok: false, error: 'Session user not found in Users sheet.' });
+  if (!currentUser) return jsonResponse({ ok: false, error: 'Session user not found.' });
 
   var channels = readTable(ss, 'Channels');
   var memberships = readTable(ss, 'ChannelMembers');
@@ -688,6 +676,24 @@ function handleCreateChannel(ss, payload, nowIso) {
     joined_at: nowIso
   });
 
+  if (Array.isArray(payload.memberEmails)) {
+    var users = readTable(ss, 'Users');
+    for (var eIdx = 0; eIdx < payload.memberEmails.length; eIdx++) {
+      var targetEmail = String(payload.memberEmails[eIdx] || '').trim().toLowerCase();
+      for (var uIdx = 0; uIdx < users.length; uIdx++) {
+        if (String(users[uIdx].email).toLowerCase() === targetEmail && users[uIdx].user_id !== userId) {
+          appendObjectRow(ss, 'ChannelMembers', {
+            membership_id: generateId('mem'),
+            channel_id: newChannel.channel_id,
+            user_id: users[uIdx].user_id,
+            role: 'member',
+            joined_at: nowIso
+          });
+        }
+      }
+    }
+  }
+
   var updatedChannels = readTable(ss, 'Channels');
   var memberships = readTable(ss, 'ChannelMembers');
   var accessible = updatedChannels.filter(function(ch) {
@@ -699,6 +705,132 @@ function handleCreateChannel(ss, payload, nowIso) {
     channel: newChannel,
     channels: accessible,
     memberships: memberships,
+    timestamp: nowIso
+  });
+}
+
+function handleEditChannel(ss, payload, nowIso) {
+  var userId = String(payload.userId || '');
+  var channelId = String(payload.channelId || '');
+  var rawName = String(payload.name || '').trim().toLowerCase().replace(/[^a-z0-9-_]+/g, '-').replace(/^-|-$/g, '');
+  if (rawName.length < 2) {
+    return jsonResponse({ ok: false, error: 'Channel name must be at least 2 characters.' });
+  }
+
+  var channels = readTable(ss, 'Channels');
+  var memberships = readTable(ss, 'ChannelMembers');
+  var targetIndex = -1;
+
+  for (var i = 0; i < channels.length; i++) {
+    if (channels[i].channel_id === channelId) {
+      targetIndex = i;
+    } else if (!channels[i].dm_participants && String(channels[i].name).toLowerCase() === rawName) {
+      return jsonResponse({ ok: false, error: 'Channel #' + rawName + ' already exists.' });
+    }
+  }
+
+  if (targetIndex === -1) {
+    return jsonResponse({ ok: false, error: 'Channel not found.' });
+  }
+
+  var targetChannel = channels[targetIndex];
+  if (!canUserAccessChannel(targetChannel, memberships, userId)) {
+    return jsonResponse({ ok: false, error: 'Access denied to edit this channel.' });
+  }
+
+  var nextPrivate = payload.isPrivate !== undefined ? Boolean(payload.isPrivate) : Boolean(targetChannel.is_private);
+  var nextDescription = payload.description !== undefined
+    ? String(payload.description).trim()
+    : String(targetChannel.description || '');
+
+  targetChannel.name = rawName;
+  targetChannel.description = nextDescription || (nextPrivate ? 'Private team channel' : 'Team discussion channel');
+  targetChannel.is_private = nextPrivate;
+  channels[targetIndex] = targetChannel;
+  overwriteTable(ss, 'Channels', channels);
+
+  if (nextPrivate && userId) {
+    var hasMembership = false;
+    for (var m = 0; m < memberships.length; m++) {
+      if (memberships[m].channel_id === channelId && memberships[m].user_id === userId) {
+        hasMembership = true;
+        break;
+      }
+    }
+    if (!hasMembership) {
+      var newMember = {
+        membership_id: generateId('mem'),
+        channel_id: channelId,
+        user_id: userId,
+        role: 'owner',
+        joined_at: nowIso
+      };
+      appendObjectRow(ss, 'ChannelMembers', newMember);
+      memberships.push(newMember);
+    }
+  }
+
+  var accessible = channels.filter(function(ch) {
+    return canUserAccessChannel(ch, memberships, userId);
+  });
+
+  return jsonResponse({
+    ok: true,
+    channel: targetChannel,
+    channels: accessible,
+    memberships: memberships,
+    timestamp: nowIso
+  });
+}
+
+function handleDeleteChannel(ss, payload, nowIso) {
+  var userId = String(payload.userId || '');
+  var channelId = String(payload.channelId || '');
+  var channels = readTable(ss, 'Channels');
+  var memberships = readTable(ss, 'ChannelMembers');
+
+  var targetChannel = null;
+  var nonDmCount = 0;
+  for (var i = 0; i < channels.length; i++) {
+    if (!channels[i].dm_participants) nonDmCount++;
+    if (channels[i].channel_id === channelId) {
+      targetChannel = channels[i];
+    }
+  }
+
+  if (!targetChannel) {
+    return jsonResponse({ ok: false, error: 'Channel not found.' });
+  }
+  if (!canUserAccessChannel(targetChannel, memberships, userId)) {
+    return jsonResponse({ ok: false, error: 'Access denied to delete this channel.' });
+  }
+  if (!targetChannel.dm_participants && nonDmCount <= 1) {
+    return jsonResponse({ ok: false, error: 'Cannot delete the last remaining channel in the workspace.' });
+  }
+
+  var remainingChannels = channels.filter(function(ch) {
+    return ch.channel_id !== channelId;
+  });
+  var remainingMemberships = memberships.filter(function(m) {
+    return m.channel_id !== channelId;
+  });
+  var remainingMessages = readTable(ss, 'Messages').filter(function(msg) {
+    return msg.channel_id !== channelId;
+  });
+
+  overwriteTable(ss, 'Channels', remainingChannels);
+  overwriteTable(ss, 'ChannelMembers', remainingMemberships);
+  overwriteTable(ss, 'Messages', remainingMessages);
+
+  var accessible = remainingChannels.filter(function(ch) {
+    return canUserAccessChannel(ch, remainingMemberships, userId);
+  });
+
+  return jsonResponse({
+    ok: true,
+    deletedChannelId: channelId,
+    channels: accessible,
+    memberships: remainingMemberships,
     timestamp: nowIso
   });
 }
@@ -717,7 +849,7 @@ function handleAddChannelMember(ss, payload, nowIso) {
       break;
     }
   }
-  if (!target) return jsonResponse({ ok: false, error: 'User not found in Users sheet.' });
+  if (!target) return jsonResponse({ ok: false, error: 'User not found.' });
 
   var memberships = readTable(ss, 'ChannelMembers');
   var exists = false;
@@ -851,4 +983,3 @@ function jsonResponse(obj) {
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
-`;
