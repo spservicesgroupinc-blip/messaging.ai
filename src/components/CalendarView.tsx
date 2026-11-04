@@ -19,7 +19,7 @@ interface CalendarViewProps {
     location: string;
     attendee_emails: string[];
   }) => Promise<{ ok: boolean; error?: string }>;
-  onDeleteEvent: (eventId: string) => Promise<void>;
+  onDeleteEvent: (eventId: string) => Promise<{ ok: boolean; error?: string }>;
 }
 
 export function CalendarView({
@@ -53,9 +53,8 @@ export function CalendarView({
           variant="secondary"
           size="sm"
           onClick={() => setCreateModalOpen(true)}
-          icon={<Plus size={16} strokeWidth={1.75} />}
         >
-          Schedule event
+          <Plus size={16} strokeWidth={1.75} /> Schedule event
         </Button>
       </div>
 

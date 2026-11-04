@@ -224,7 +224,7 @@ export function CreateCalendarEventModal({
                       : 'border-[#cbd5e1] text-slate-700 hover:bg-[#f8fafc]'
                   }`}
                 >
-                  <Avatar user={user} size={16} />
+                  <Avatar userName={user.full_name} size="sm" />
                   <span className="truncate max-w-[120px]">{user.full_name}</span>
                 </button>
               ))}

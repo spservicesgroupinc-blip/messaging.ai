@@ -98,12 +98,12 @@ function AppContent() {
     }
     return result;
   };
-  const deleteCalendarEvent = async (eventId: string) => {
+  const deleteCalendarEvent = async (eventId: string): Promise<{ ok: boolean; error?: string }> => {
     const result = await w.act({ action: 'deleteCalendarEvent', eventId });
     if (result.ok && result.calendarEvents) {
       setCalendarEvents(result.calendarEvents);
     }
-    return result;
+    return { ok: result.ok, error: result.error };
   };
   const membershipIds = new Set(w.memberships.filter(member => member.channel_id === active?.channel_id).map(member => member.user_id));
   if (active?.created_by && active.created_by !== 'system') membershipIds.add(active.created_by);
