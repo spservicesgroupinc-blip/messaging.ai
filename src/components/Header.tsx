@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Hash, Lock, RefreshCw, Search, Users, X } from 'lucide-react';
+import { ArrowLeft, Calendar, Hash, Lock, RefreshCw, Search, Users, X } from 'lucide-react';
 import { type SheetChannel } from '../utils/sheetsProtocol';
 
 interface HeaderProps {
@@ -12,12 +12,14 @@ interface HeaderProps {
   syncing: boolean;
   isMembersDrawerOpen: boolean;
   onToggleMembers: () => void;
+  onToggleCalendar: () => void;
+  isCalendarOpen: boolean;
   onBack: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   activeChannel, channelDisplayName, memberCount, searchQuery, onSearchChange, onRefresh,
-  syncing, isMembersDrawerOpen, onToggleMembers, onBack,
+  syncing, isMembersDrawerOpen, onToggleMembers, onToggleCalendar, isCalendarOpen, onBack,
 }) => {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const ChannelIcon = activeChannel?.dm_participants ? Users : activeChannel?.is_private ? Lock : Hash;
@@ -67,6 +69,12 @@ export const Header: React.FC<HeaderProps> = ({
               (isMembersDrawerOpen ? 'border-[#cbd5e1] bg-[#f1f5f9] text-[#2563eb]' : 'border-[#e2e8f0] text-[#64748b] hover:bg-[#f8fafc]')}>
             <Users aria-hidden='true' className='h-4 w-4' strokeWidth={1.75} />
             <span className='tabular-nums'>{memberCount}</span><span className='hidden xl:inline'>members</span>
+          </button>
+          <button type='button' onClick={onToggleCalendar} aria-label={isCalendarOpen ? 'Close calendar' : 'View calendar events'} aria-pressed={isCalendarOpen}
+            className={'flex h-11 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition-colors sm:h-8 sm:gap-2 sm:px-2.5 ' +
+              (isCalendarOpen ? 'border-[#cbd5e1] bg-[#f1f5f9] text-[#2563eb]' : 'border-[#e2e8f0] text-[#64748b] hover:bg-[#f8fafc]')}>
+            <Calendar aria-hidden='true' className='h-4 w-4' strokeWidth={1.75} />
+            <span className='hidden sm:inline'>Calendar</span>
           </button>
         </div>
       </div>

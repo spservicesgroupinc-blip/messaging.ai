@@ -47,6 +47,21 @@ var SHEET_SCHEMAS = {
     'reactions_json',
     'created_at',
     'updated_at'
+  ],
+  CalendarEvents: [
+    'event_id',
+    'title',
+    'description',
+    'channel_id',
+    'organizer_id',
+    'organizer_name',
+    'start_time',
+    'end_time',
+    'timezone',
+    'location',
+    'attendee_emails',
+    'created_at',
+    'updated_at'
   ]
 };
 
@@ -189,6 +204,18 @@ function dispatchRequest(ss, payload, nowIso) {
 
     if (action === 'updateUserStatus') {
       return handleUpdateUserStatus(ss, payload, nowIso);
+    }
+
+    if (action === 'createCalendarEvent') {
+      return handleCreateCalendarEvent(ss, payload, nowIso);
+    }
+
+    if (action === 'getCalendarEvents') {
+      return handleGetCalendarEvents(ss, payload, nowIso);
+    }
+
+    if (action === 'deleteCalendarEvent') {
+      return handleDeleteCalendarEvent(ss, payload, nowIso);
     }
 
     return jsonResponse({ ok: false, error: 'Unsupported action: ' + action });
@@ -1015,6 +1042,125 @@ function handleUpdateUserStatus(ss, payload, nowIso) {
     ok: true,
     user: stripPassword(updated),
     users: users.map(stripPassword),
+    timestamp: nowIso
+  });
+}
+
+function handleCreateCalendarEvent(ss, payload, nowIso) {
+  var userId = String(payload.userId || '');
+  var channelId = String(payload.channelId || '');
+  var title = String(payload.title || '').trim();
+  var description = String(payload.description || '').trim();
+  var startTime = String(payload.start_time || '');
+  var endTime = String(payload.end_time || '');
+  var timezone = String(payload.timezone || 'UTC').trim();
+  var location = String(payload.location || '').trim();
+  var attendeeEmails = [];
+  if (Array.isArray(payload.attendee_emails)) {
+    for (var i = 0; i < payload.attendee_emails.length; i++) {
+      var email = String(payload.attendee_emails[i] || '').trim().toLowerCase();
+      if (email) attendeeEmails.push(email);
+    }
+  }
+
+  if (!userId) return jsonResponse({ ok: false, error: 'User not found.' });
+  if (!title) return jsonResponse({ ok: false, error: 'Event title is required.' });
+  if (!startTime || !endTime) return jsonResponse({ ok: false, error: 'Start and end times are required.' });
+  if (new Date(endTime) <= new Date(startTime)) return jsonResponse({ ok: false, error: 'End time must be after start time.' });
+
+  var channels = readTable(ss, 'Channels');
+  var channel = null;
+  for (var c = 0; c < channels.length; c++) {
+    if (channels[c].channel_id === channelId) { channel = channels[c]; break; }
+  }
+  if (!channel) return jsonResponse({ ok: false, error: 'Channel not found.' });
+
+  var memberships = readTable(ss, 'ChannelMembers');
+  if (!canUserAccessChannel(channel, memberships, userId)) {
+    return jsonResponse({ ok: false, error: 'Access denied to this channel.' });
+  }
+
+  var users = readTable(ss, 'Users');
+  var organizer = null;
+  for (var u = 0; u < users.length; u++) {
+    if (users[u].user_id === userId) { organizer = users[u]; break; }
+  }
+  if (!organizer) return jsonResponse({ ok: false, error: 'Organizer not found.' });
+
+  var newEvent = {
+    event_id: generateId('evt'),
+    title: title,
+    description: description,
+    channel_id: channelId,
+    organizer_id: userId,
+    organizer_name: organizer.full_name,
+    start_time: startTime,
+    end_time: endTime,
+    timezone: timezone,
+    location: location,
+    attendee_emails: attendeeEmails.join(','),
+    created_at: nowIso,
+    updated_at: nowIso
+  };
+  appendObjectRow(ss, 'CalendarEvents', newEvent);
+
+  var allEvents = readTable(ss, 'CalendarEvents');
+  var channelEvents = allEvents.filter(function(e) { return e.channel_id === channelId; });
+
+  return jsonResponse({
+    ok: true,
+    calendarEvents: channelEvents,
+    timestamp: nowIso
+  });
+}
+
+function handleGetCalendarEvents(ss, payload, nowIso) {
+  var userId = String(payload.userId || '');
+  var channelId = String(payload.channelId || '');
+  var channels = readTable(ss, 'Channels');
+  var channel = null;
+  for (var c = 0; c < channels.length; c++) {
+    if (channels[c].channel_id === channelId) { channel = channels[c]; break; }
+  }
+  if (!channel) return jsonResponse({ ok: false, error: 'Channel not found.' });
+
+  var memberships = readTable(ss, 'ChannelMembers');
+  if (!canUserAccessChannel(channel, memberships, userId)) {
+    return jsonResponse({ ok: false, error: 'Access denied to this channel.' });
+  }
+
+  var allEvents = readTable(ss, 'CalendarEvents');
+  var channelEvents = allEvents
+    .filter(function(e) { return e.channel_id === channelId; })
+    .sort(function(a, b) { return String(a.start_time).localeCompare(String(b.start_time)); });
+
+  return jsonResponse({
+    ok: true,
+    calendarEvents: channelEvents,
+    timestamp: nowIso
+  });
+}
+
+function handleDeleteCalendarEvent(ss, payload, nowIso) {
+  var userId = String(payload.userId || '');
+  var eventId = String(payload.eventId || '');
+  var allEvents = readTable(ss, 'CalendarEvents');
+  var target = null;
+  for (var i = 0; i < allEvents.length; i++) {
+    if (allEvents[i].event_id === eventId) { target = allEvents[i]; break; }
+  }
+  if (!target) return jsonResponse({ ok: false, error: 'Event not found.' });
+  if (target.organizer_id !== userId) return jsonResponse({ ok: false, error: 'You can only delete your own events.' });
+
+  var remaining = allEvents.filter(function(e) { return e.event_id !== eventId; });
+  overwriteTable(ss, 'CalendarEvents', remaining);
+
+  var channelEvents = remaining.filter(function(e) { return e.channel_id === target.channel_id; });
+
+  return jsonResponse({
+    ok: true,
+    deletedEventId: eventId,
+    calendarEvents: channelEvents,
     timestamp: nowIso
   });
 }

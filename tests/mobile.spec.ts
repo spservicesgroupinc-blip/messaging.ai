@@ -12,7 +12,7 @@ function messages(id = 'general', count = 25) {
 }
 type Interceptor = (payload: Record<string, string>, route: Route) => Promise<boolean | void>;
 async function setup(page: Page, intercept?: Interceptor) {
-  let database: SheetsDatabase = { Users: [user, teammate].map(person => ({ ...person, password_hash: '' })), Channels: [channel, planning, dm], ChannelMembers: [], Messages: ['general', 'planning', 'dm'].flatMap(id => messages(id)) };
+  let database: SheetsDatabase = { Users: [user, teammate].map(person => ({ ...person, password_hash: '' })), Channels: [channel, planning, dm], ChannelMembers: [], Messages: ['general', 'planning', 'dm'].flatMap(id => messages(id)), CalendarEvents: [] };
   await page.context().addInitScript(saved => localStorage.setItem('relay_session_user', JSON.stringify(saved)), user);
   await page.route('**/api/events', route => route.fulfill({ contentType: 'text/event-stream', body: 'data: {"type":"connected","mode":"serverless-polling"}\n\n' }));
   await page.route('**/api/gas', async route => {

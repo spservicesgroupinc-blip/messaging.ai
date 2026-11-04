@@ -1,6 +1,6 @@
 import { enrichMessagesForChannel, executeSheetAction, toPublicUser, type EnrichedMessage, type GasRequestPayload, type GasResponse, type PublicUser, type SheetsDatabase } from './sheetsProtocol';
 
-const MUTATIONS = new Set(['sendMessage', 'editMessage', 'deleteMessage', 'toggleReaction', 'createChannel', 'editChannel', 'deleteChannel', 'addChannelMember', 'removeChannelMember', 'openDirectMessage', 'updateUserStatus']);
+const MUTATIONS = new Set(['sendMessage', 'editMessage', 'deleteMessage', 'toggleReaction', 'createChannel', 'editChannel', 'deleteChannel', 'addChannelMember', 'removeChannelMember', 'openDirectMessage', 'updateUserStatus', 'createCalendarEvent', 'deleteCalendarEvent']);
 export interface OptimisticAction {
   id: string;
   payload: GasRequestPayload;
@@ -13,13 +13,14 @@ export interface WorkspaceSnapshot {
   users: PublicUser[];
   channels: SheetsDatabase['Channels'];
   memberships: SheetsDatabase['ChannelMembers'];
+  calendarEvents: SheetsDatabase['CalendarEvents'];
   byChannel: Record<string, EnrichedMessage[]>;
   failures: OptimisticAction[];
   pendingCount: number;
   backupFailed: boolean;
 }
 type BackupStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
-const TEXT_FIELDS = ['userId', 'channelId', 'targetUserId', 'email', 'content', 'messageId', 'parentMessageId', 'emoji', 'name', 'description', 'statusText', 'roleTitle'] as const;
+const TEXT_FIELDS = ['userId', 'channelId', 'targetUserId', 'email', 'content', 'messageId', 'parentMessageId', 'emoji', 'name', 'description', 'statusText', 'roleTitle', 'title', 'start_time', 'end_time', 'timezone', 'location', 'eventId'] as const;
 
 // Only mutation fields enter local backups; credentials and arbitrary stored fields do not.
 function mutationPayload(input: unknown): GasRequestPayload | null {
@@ -40,6 +41,10 @@ function mutationPayload(input: unknown): GasRequestPayload | null {
     if (!Array.isArray(value.memberEmails) || !value.memberEmails.every(email => typeof email === 'string')) return null;
     payload.memberEmails = [...value.memberEmails];
   }
+  if (value.attendee_emails !== undefined) {
+    if (!Array.isArray(value.attendee_emails) || !value.attendee_emails.every(email => typeof email === 'string')) return null;
+    payload.attendee_emails = [...value.attendee_emails];
+  }
   return payload;
 }
 
@@ -56,7 +61,7 @@ export class OptimisticWorkspace {
   private key: string;
 
   constructor(private user: PublicUser | null, private storage?: BackupStorage) {
-    this.base = { Users: user ? [{ ...user, password_hash: '' }] : [], Channels: [], ChannelMembers: [], Messages: [] };
+    this.base = { Users: user ? [{ ...user, password_hash: '' }] : [], Channels: [], ChannelMembers: [], Messages: [], CalendarEvents: [] };
     this.projected = this.base;
     this.key = 'relay_actions_v1:' + encodeURIComponent(user?.user_id ?? '');
     if (user) this.restore();
@@ -111,12 +116,12 @@ export class OptimisticWorkspace {
       this.base.Messages = [...this.base.Messages.filter(message => message.channel_id !== id), ...response.messages.filter(message => this.local(message.channel_id) === id).map(({ delivery: _delivery, ...message }) => ({ ...message, channel_id: id }))];
       this.loaded.add(id);
     }
-    if (response.deletedChannelId) {
-      const deleted = this.local(response.deletedChannelId);
-      this.base.Channels = this.base.Channels.filter(channel => channel.channel_id !== deleted);
-      this.base.Messages = this.base.Messages.filter(message => message.channel_id !== deleted);
-      this.base.ChannelMembers = this.base.ChannelMembers.filter(member => member.channel_id !== deleted);
-      this.loaded.delete(deleted);
+    if (response.calendarEvents) {
+      this.base.CalendarEvents = response.calendarEvents.map(event => ({ ...event, channel_id: this.local(event.channel_id) }));
+    }
+    if (response.deletedEventId) {
+      const deleted = this.local(response.deletedEventId);
+      this.base.CalendarEvents = this.base.CalendarEvents.filter(event => event.event_id !== deleted);
     }
   }
   confirm(operation: OptimisticAction, response: GasResponse) {
@@ -158,7 +163,7 @@ export class OptimisticWorkspace {
           .sort((a, b) => Number(Boolean(a.delivery)) - Number(Boolean(b.delivery)) || a.created_at.localeCompare(b.created_at));
       }
     }
-    this.snapshot = { users: db.Users.map(toPublicUser), channels: db.Channels, memberships: db.ChannelMembers, byChannel, failures: this.operations.filter(operation => operation.status === 'failed'), pendingCount: this.operations.filter(operation => operation.status === 'pending').length, backupFailed: this.backupFailed };
+    this.snapshot = { users: db.Users.map(toPublicUser), channels: db.Channels, memberships: db.ChannelMembers, calendarEvents: db.CalendarEvents, byChannel, failures: this.operations.filter(operation => operation.status === 'failed'), pendingCount: this.operations.filter(operation => operation.status === 'pending').length, backupFailed: this.backupFailed };
     this.listeners.forEach(listener => listener());
   }
   private persist() {

@@ -30,6 +30,24 @@ export interface SheetChannelMember {
   joined_at: string;
 }
 
+export interface SheetCalendarEvent {
+  event_id: string;
+  title: string;
+  description: string;
+  channel_id: string;
+  organizer_id: string;
+  organizer_name: string;
+  start_time: string; // ISO 8601
+  end_time: string;   // ISO 8601
+  timezone: string;
+  location?: string;
+  attendee_emails: string; // comma-separated emails
+  created_at: string;
+  updated_at: string;
+}
+
+export type PublicCalendarEvent = Omit<SheetCalendarEvent, never>;
+
 export type ReactionMap = Record<string, string[]>; // emoji -> array of user_ids
 
 export interface SheetMessage {
@@ -57,6 +75,7 @@ export interface SheetsDatabase {
   Channels: SheetChannel[];
   ChannelMembers: SheetChannelMember[];
   Messages: SheetMessage[];
+  CalendarEvents: SheetCalendarEvent[];
 }
 
 export interface GasRequestPayload {
@@ -78,7 +97,10 @@ export interface GasRequestPayload {
     | 'removeChannelMember'
     | 'openDirectMessage'
     | 'updateUserStatus'
-    | 'inspectSheets';
+    | 'inspectSheets'
+    | 'createCalendarEvent'
+    | 'getCalendarEvents'
+    | 'deleteCalendarEvent';
   email?: string;
   password?: string;
   fullName?: string;
@@ -97,6 +119,14 @@ export interface GasRequestPayload {
   messageId?: string;
   emoji?: string;
   since?: string;
+  // Calendar event fields
+  title?: string;
+  start_time?: string;
+  end_time?: string;
+  timezone?: string;
+  location?: string;
+  attendee_emails?: string[];
+  eventId?: string;
 }
 
 export interface GasResponse {
@@ -111,11 +141,14 @@ export interface GasResponse {
   channel?: SheetChannel;
   deletedChannelId?: string;
   message?: EnrichedMessage;
+  calendarEvents?: SheetCalendarEvent[];
+  deletedEventId?: string;
   sheets?: {
     Users: PublicUser[];
     Channels: SheetChannel[];
     ChannelMembers: SheetChannelMember[];
     Messages: SheetMessage[];
+    CalendarEvents: SheetCalendarEvent[];
   };
   timestamp?: string;
 }
@@ -145,6 +178,7 @@ export function createEmptySheetsDatabase(nowIso = new Date().toISOString()): Sh
     ],
     ChannelMembers: [],
     Messages: [],
+    CalendarEvents: [],
   };
 }
 
@@ -300,6 +334,7 @@ export function executeSheetAction(
     Channels: [...currentDb.Channels],
     ChannelMembers: [...currentDb.ChannelMembers],
     Messages: [...currentDb.Messages],
+    CalendarEvents: [...currentDb.CalendarEvents],
   };
 
   if (db.Channels.length === 0) {
@@ -331,6 +366,7 @@ export function executeSheetAction(
             Channels: db.Channels,
             ChannelMembers: db.ChannelMembers,
             Messages: db.Messages,
+            CalendarEvents: db.CalendarEvents,
           },
         },
       };
@@ -1051,6 +1087,122 @@ export function executeSheetAction(
           ok: true,
           user: toPublicUser(db.Users[idx]),
           users: db.Users.map(toPublicUser),
+          timestamp: nowIso,
+        },
+      };
+    }
+
+    case 'createCalendarEvent': {
+      const userId = payload.userId || '';
+      const channelId = payload.channelId || '';
+      const title = (payload.title || '').trim();
+      const description = (payload.description || '').trim();
+      const startTime = payload.start_time || '';
+      const endTime = payload.end_time || '';
+      const timezone = (payload.timezone || 'UTC').trim();
+      const location = (payload.location || '').trim();
+      const attendeeEmails = Array.isArray(payload.attendee_emails)
+        ? payload.attendee_emails.map((e) => e.trim().toLowerCase()).filter(Boolean)
+        : [];
+
+      if (!userId) {
+        return { db, response: { ok: false, error: 'User not found.' } };
+      }
+      if (!title) {
+        return { db, response: { ok: false, error: 'Event title is required.' } };
+      }
+      if (!startTime || !endTime) {
+        return { db, response: { ok: false, error: 'Start and end times are required.' } };
+      }
+      if (new Date(endTime) <= new Date(startTime)) {
+        return { db, response: { ok: false, error: 'End time must be after start time.' } };
+      }
+
+      const channel = db.Channels.find((c) => c.channel_id === channelId);
+      if (!channel) {
+        return { db, response: { ok: false, error: 'Channel not found.' } };
+      }
+      if (!canUserAccessChannel(channel, db.ChannelMembers, userId)) {
+        return { db, response: { ok: false, error: 'Access denied to this channel.' } };
+      }
+
+      const organizer = db.Users.find((u) => u.user_id === userId);
+      if (!organizer) {
+        return { db, response: { ok: false, error: 'Organizer not found.' } };
+      }
+
+      const newEvent: SheetCalendarEvent = {
+        event_id: generateId('evt'),
+        title,
+        description,
+        channel_id: channelId,
+        organizer_id: userId,
+        organizer_name: organizer.full_name,
+        start_time: startTime,
+        end_time: endTime,
+        timezone,
+        location,
+        attendee_emails: attendeeEmails.join(','),
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+
+      db.CalendarEvents.push(newEvent);
+
+      return {
+        db,
+        response: {
+          ok: true,
+          calendarEvents: db.CalendarEvents.filter((e) => e.channel_id === channelId),
+          timestamp: nowIso,
+        },
+      };
+    }
+
+    case 'getCalendarEvents': {
+      const userId = payload.userId || '';
+      const channelId = payload.channelId || '';
+      const channel = db.Channels.find((c) => c.channel_id === channelId);
+      if (!channel) {
+        return { db, response: { ok: false, error: 'Channel not found.' } };
+      }
+      if (!canUserAccessChannel(channel, db.ChannelMembers, userId)) {
+        return { db, response: { ok: false, error: 'Access denied to this channel.' } };
+      }
+
+      const events = db.CalendarEvents
+        .filter((e) => e.channel_id === channelId)
+        .sort((a, b) => a.start_time.localeCompare(b.start_time));
+
+      return {
+        db,
+        response: {
+          ok: true,
+          calendarEvents: events,
+          timestamp: nowIso,
+        },
+      };
+    }
+
+    case 'deleteCalendarEvent': {
+      const userId = payload.userId || '';
+      const eventId = payload.eventId || '';
+      const event = db.CalendarEvents.find((e) => e.event_id === eventId);
+      if (!event) {
+        return { db, response: { ok: false, error: 'Event not found.' } };
+      }
+      if (event.organizer_id !== userId) {
+        return { db, response: { ok: false, error: 'You can only delete your own events.' } };
+      }
+
+      db.CalendarEvents = db.CalendarEvents.filter((e) => e.event_id !== eventId);
+
+      return {
+        db,
+        response: {
+          ok: true,
+          deletedEventId: eventId,
+          calendarEvents: db.CalendarEvents.filter((e) => e.channel_id === event.channel_id),
           timestamp: nowIso,
         },
       };
