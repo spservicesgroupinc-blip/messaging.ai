@@ -1,5 +1,6 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { executeSheetAction, type GasRequestPayload, type SheetsDatabase } from '../src/utils/sheetsProtocol';
 
 const user = { user_id: 'test-user', email: 'mobile@example.test', full_name: 'Mobile Tester', display_name: 'Mobile', role_title: 'Team member', status_text: '', created_at: '2026-11-04T12:00:00Z', last_seen_at: '2026-11-04T12:00:00Z' };
 const teammate = { ...user, user_id: 'teammate', full_name: 'Jordan Smith', email: 'jordan@example.test' };
@@ -11,13 +12,15 @@ function messages(id = 'general', count = 25) {
 }
 type Interceptor = (payload: Record<string, string>, route: Route) => Promise<boolean | void>;
 async function setup(page: Page, intercept?: Interceptor) {
+  let database: SheetsDatabase = { Users: [user, teammate].map(person => ({ ...person, password_hash: '' })), Channels: [channel, planning, dm], ChannelMembers: [], Messages: ['general', 'planning', 'dm'].flatMap(id => messages(id)) };
   await page.context().addInitScript(saved => localStorage.setItem('relay_session_user', JSON.stringify(saved)), user);
   await page.route('**/api/events', route => route.fulfill({ contentType: 'text/event-stream', body: 'data: {"type":"connected","mode":"serverless-polling"}\n\n' }));
   await page.route('**/api/gas', async route => {
     const payload = route.request().postDataJSON();
     if (await intercept?.(payload, route)) return;
-    const id = payload.channelId || 'general';
-    await route.fulfill({ json: { ok: true, user, users: [user, teammate], channels: [channel, planning, dm], memberships: [], messages: messages(id), ...(payload.action === 'openDirectMessage' ? { channel: dm, messages: messages('dm') } : {}) } });
+    const result = executeSheetAction(database, payload as GasRequestPayload);
+    database = result.db;
+    await route.fulfill({ json: result.response });
   });
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Channels', exact: true, level: 1 })).toBeVisible();
@@ -27,7 +30,7 @@ async function open(page: Page, name = 'general') {
   await expect(page.getByRole('textbox', { name: 'Message input', exact: true })).toBeVisible();
 }
 async function thread(page: Page) {
-  await page.getByRole('button', { name: 'Show message actions', exact: true }).last().click();
+  await page.getByRole('button', { name: 'Show message actions', exact: true }).and(page.locator(':enabled')).last().click();
   await page.getByRole('button', { name: 'Reply in thread', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Reply in thread', exact: true })).toBeVisible();
 }
@@ -63,7 +66,7 @@ test('channel drafts isolate, restore after reload, clear explicitly, and phone 
   await page.getByRole('button', { name: 'Clear draft' }).click(); await expect(input).toHaveValue('');
 });
 
-test('failed main and thread sends preserve drafts and show errors', async ({ page }) => {
+test('failed sends keep recoverable text without overwriting a newer main or thread draft', async ({ page }) => {
   await setup(page, async (payload, route) => {
     if (payload.action !== 'sendMessage') return;
     await route.fulfill({ json: { ok: false, error: 'Please try again after reconnecting.' } }); return true;
@@ -71,12 +74,20 @@ test('failed main and thread sends preserve drafts and show errors', async ({ pa
   await open(page);
   const input = page.getByRole('textbox', { name: 'Message input', exact: true });
   await input.fill('Keep my message'); await page.getByRole('button', { name: 'Send message', exact: true }).click();
-  await expect(input).toHaveValue('Keep my message'); await expect(page.getByRole('alert')).toContainText('Please try again');
+  await expect(input).toHaveValue('');
+  await input.fill('Newer draft');
+  await expect(page.getByRole('alert')).toContainText('Please try again');
+  await page.getByRole('button', { name: 'Restore message draft' }).click();
+  await expect(input).toHaveValue('Newer draft\nKeep my message');
   await thread(page);
   const reply = page.getByRole('textbox', { name: 'Reply in thread', exact: true });
   await reply.fill('Keep my reply'); await page.getByRole('button', { name: 'Send thread reply' }).click();
-  await expect(reply).toHaveValue('Keep my reply'); await expect(page.getByRole('dialog').getByRole('alert')).toContainText('Please try again');
-  await page.getByRole('button', { name: 'Close thread panel' }).click(); await thread(page); await expect(reply).toHaveValue('Keep my reply');
+  await expect(reply).toHaveValue('');
+  await reply.fill('Newer reply');
+  await page.getByRole('button', { name: 'Close thread panel' }).click();
+  await expect(page.getByRole('alert')).toContainText('Please try again');
+  await page.getByRole('button', { name: 'Restore message draft' }).click();
+  await expect(reply).toHaveValue('Newer reply\nKeep my reply');
 });
 
 for (const firstFails of [false, true]) test(`a thread reply waits for a pending channel send (${firstFails ? 'failed' : 'successful'} first send)`, async ({ page }) => {
@@ -105,14 +116,17 @@ for (const firstFails of [false, true]) test(`a thread reply waits for a pending
   await reply.fill('Thread reply');
   await page.getByRole('button', { name: 'Send thread reply' }).click();
   try {
-    await expect(reply).toBeDisabled();
+    await expect(reply).toBeEnabled();
+    await expect(reply).toHaveValue('');
+    await expect(page.getByRole('dialog').getByText('Thread reply', { exact: true })).toBeVisible();
     await expect(page.getByRole('alert')).toHaveCount(0);
     expect(sent).toEqual(['Main message']);
   } finally { release(); }
   await expect(reply).toHaveValue('');
-  expect(sent).toEqual(['Main message', 'Thread reply']);
+  await expect.poll(() => sent).toEqual(['Main message', 'Thread reply']);
   await page.getByRole('button', { name: 'Close thread panel' }).click();
-  await expect(page.getByRole('textbox', { name: 'Message input', exact: true })).toHaveValue(firstFails ? 'Main message' : '');
+  await expect(page.getByRole('textbox', { name: 'Message input', exact: true })).toHaveValue('');
+  if (firstFails) await expect(page.getByRole('region', { name: 'Changes needing attention' })).toContainText('Main message');
 });
 
 test('sign-out cancels queued actions before they reach the backend', async ({ page }) => {
@@ -133,13 +147,183 @@ test('sign-out cancels queued actions before they reach the backend', async ({ p
   await thread(page);
   await page.getByRole('textbox', { name: 'Reply in thread', exact: true }).fill('Do not send');
   await page.getByRole('button', { name: 'Send thread reply' }).click();
-  await expect(page.getByRole('textbox', { name: 'Reply in thread', exact: true })).toBeDisabled();
+  await expect(page.getByRole('textbox', { name: 'Reply in thread', exact: true })).toHaveValue('');
+  await expect(page.getByRole('dialog').getByText('Do not send', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Close thread panel' }).click();
   await page.getByRole('button', { name: 'Channels', exact: true }).click();
   try { await page.getByRole('button', { name: 'Sign out', exact: true }).click(); }
   finally { release(); }
   await expect(page.getByRole('button', { name: 'Sign in to Relay', exact: true })).toBeVisible();
   expect(sent).toEqual(['In flight']);
+  expect(await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('relay_actions_v1:')).length)).toBe(0);
+});
+
+test('multiple messages appear and leave the composer free before background saves finish', async ({ page }) => {
+  const errors: string[] = [];
+  let releaseFirst!: () => void; let releaseSecond!: () => void;
+  const first = new Promise<void>(resolve => { releaseFirst = resolve; });
+  const second = new Promise<void>(resolve => { releaseSecond = resolve; });
+  let sends = 0;
+  await setup(page, async payload => {
+    if (payload.action !== 'sendMessage') return;
+    sends++;
+    await (sends === 1 ? first : second);
+  });
+  await open(page);
+  // Observe the action itself; initial document metadata is outside this regression.
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+  const input = page.getByRole('textbox', { name: 'Message input', exact: true });
+  try {
+    await input.fill('Instant first'); await page.getByRole('button', { name: 'Send message', exact: true }).click();
+    await expect(input).toHaveValue(''); await expect(input).toBeEnabled();
+    await expect(page.getByText('Instant first', { exact: true })).toBeVisible();
+    await input.fill('Instant second'); await page.getByRole('button', { name: 'Send message', exact: true }).click();
+    await expect(page.getByText('Instant second', { exact: true })).toBeVisible();
+    await expect(input).toHaveValue(''); await input.fill('Next unsent draft');
+    await page.screenshot({ path: test.info().outputPath('instant-actions.png') });
+    expect(sends).toBe(1);
+    releaseFirst(); await expect.poll(() => sends).toBe(2);
+    await expect(page.getByText('Instant first', { exact: true })).toHaveCount(1);
+    await expect(page.getByText('Instant second', { exact: true })).toHaveCount(1);
+    await expect(page.locator('article p').filter({ hasText: /^Instant (first|second)$/ })).toHaveText(['Instant first', 'Instant second']);
+    expect(errors).toEqual([]);
+    await expect(input).toHaveValue('Next unsent draft');
+    releaseSecond();
+    await expect(page.getByText('Sending…', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Instant first', { exact: true })).toHaveCount(1);
+    await expect(page.getByText('Instant second', { exact: true })).toHaveCount(1);
+  } finally { releaseFirst(); releaseSecond(); }
+});
+
+test('reaction, edit, and delete update immediately and roll back after a background failure', async ({ page }) => {
+  let release!: () => void;
+  let hold = new Promise<void>(resolve => { release = resolve; });
+  const requests: string[] = [];
+  await setup(page, async (payload, route) => {
+    if (!['toggleReaction', 'editMessage', 'deleteMessage'].includes(payload.action)) return;
+    requests.push(payload.action);
+    await hold;
+    await route.fulfill({ json: { ok: false, error: 'Could not save this change.' } }); return true;
+  });
+  await open(page);
+  const original = 'Update 25 for general: Please review the latest project notes.';
+  try {
+    await page.getByRole('button', { name: 'Show message actions', exact: true }).last().click();
+    await page.getByRole('button', { name: 'React with 👍', exact: true }).click();
+    await expect(page.getByRole('button', { name: '👍, 1 reaction', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Show message actions', exact: true }).last().click();
+    await page.getByRole('button', { name: 'Edit message', exact: true }).click();
+    await page.getByRole('textbox', { name: 'Edit message', exact: true }).fill('Instant edit');
+    await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+    await expect(page.getByRole('textbox', { name: 'Edit message', exact: true })).toHaveCount(0);
+    await expect(page.getByText('Instant edit', { exact: false })).toBeVisible();
+    release();
+    await expect(page.getByText(original, { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '👍, 1 reaction', exact: true })).toHaveCount(0);
+    await expect.poll(() => requests.length).toBe(2);
+    hold = new Promise<void>(resolve => { release = resolve; });
+    await page.getByRole('button', { name: 'Show message actions', exact: true }).last().click();
+    await page.getByRole('button', { name: 'Delete message', exact: true }).click();
+    await expect(page.getByText(original, { exact: true })).toHaveCount(0);
+    release(); await expect(page.getByText(original, { exact: true })).toBeVisible();
+  } finally { release(); }
+});
+
+test('creating a channel opens it immediately and queued messages use its confirmed ID', async ({ page }) => {
+  let release!: () => void;
+  const hold = new Promise<void>(resolve => { release = resolve; });
+  const requests: Record<string, string>[] = [];
+  await setup(page, async payload => {
+    if (!['createChannel', 'sendMessage'].includes(payload.action)) return;
+    requests.push(payload);
+    if (payload.action === 'createChannel') await hold;
+  });
+  try {
+    await page.getByRole('button', { name: 'New channel', exact: true }).click();
+    await page.locator('#new-channel-name').fill('instant-channel');
+    await page.getByRole('button', { name: 'Create Channel', exact: true }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'instant-channel', exact: true }).first()).toBeVisible();
+    const input = page.getByRole('textbox', { name: 'Message input', exact: true });
+    await input.fill('Message in new channel');
+    await page.getByRole('button', { name: 'Send message', exact: true }).click();
+    await expect(page.getByText('Message in new channel', { exact: true })).toBeVisible();
+    await input.fill('Next channel draft');
+    expect(requests.length).toBe(1);
+    release();
+    await expect.poll(() => requests.length).toBe(2);
+    expect(requests[1].channelId).not.toMatch(/^local_/);
+    await expect(page.getByText('Sending…', { exact: true })).toHaveCount(0);
+    await expect(input).toHaveValue('Next channel draft');
+    await page.reload();
+    await expect(input).toHaveValue('Next channel draft');
+    await expect(page.getByText('Message in new channel', { exact: true })).toHaveCount(1);
+  } finally { release(); }
+});
+
+test('unconfirmed sends survive reload as recoverable text without automatic resending', async ({ page }) => {
+  let release!: () => void;
+  const hold = new Promise<void>(resolve => { release = resolve; });
+  let sends = 0;
+  await setup(page, async (payload, route) => {
+    if (payload.action !== 'sendMessage') return;
+    sends++; await hold;
+    await route.fulfill({ json: { ok: false, error: 'Connection lost' } }).catch(() => {}); return true;
+  });
+  try {
+    await open(page);
+    const input = page.getByRole('textbox', { name: 'Message input', exact: true });
+    await input.fill('Retain after reload');
+    await page.getByRole('button', { name: 'Send message', exact: true }).click();
+    await expect(input).toHaveValue('');
+    await page.reload();
+    await expect(page.getByRole('region', { name: 'Changes needing attention' })).toContainText('Retain after reload');
+    expect(sends).toBe(1);
+    await page.getByRole('button', { name: 'Restore message draft', exact: true }).click();
+    await expect(input).toHaveValue('Retain after reload');
+    expect(sends).toBe(1);
+  } finally { release(); }
+});
+
+test('private channel creation, members, rename, and deletion respond before background confirmation', async ({ page }) => {
+  let release!: () => void;
+  const hold = new Promise<void>(resolve => { release = resolve; });
+  const requests: string[] = [];
+  await setup(page, async payload => {
+    if (['getBootstrap', 'getMessages'].includes(payload.action)) return;
+    requests.push(payload.action);
+    if (payload.action === 'createChannel') await hold;
+  });
+  try {
+    await page.getByRole('button', { name: 'New channel', exact: true }).click();
+    await page.getByRole('button', { name: 'Visibility: Private Channel', exact: true }).click();
+    await page.locator('#new-channel-name').fill('instant-private');
+    await page.getByRole('button', { name: 'Create Channel', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'instant-private', exact: true }).first()).toBeVisible();
+    await page.getByRole('button', { name: 'View 1 channel members', exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Add', exact: true }).last().click();
+    const remove = page.getByRole('button', { name: 'Remove Jordan Smith from channel', exact: true });
+    await expect(remove).toBeVisible(); await remove.click(); await expect(remove).toHaveCount(0);
+    await page.getByRole('button', { name: 'Close channel access panel', exact: true }).click();
+    await page.getByRole('button', { name: 'Channels', exact: true }).click();
+    await page.getByRole('button', { name: 'Channel options for instant-private', exact: true }).click();
+    await page.getByRole('button', { name: 'Edit channel', exact: true }).click();
+    await page.locator('#edit-channel-name').fill('instant-renamed');
+    await page.getByRole('button', { name: 'Save Changes', exact: true }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'instant-renamed', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Channel options for instant-renamed', exact: true }).click();
+    await page.getByRole('button', { name: 'Delete channel', exact: true }).click();
+    await page.getByRole('button', { name: 'Delete Channel', exact: true }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Channels', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'instant-renamed', exact: true })).toHaveCount(0);
+    expect(requests).toEqual(['createChannel']);
+    release();
+    await expect.poll(() => requests).toEqual(['createChannel', 'addChannelMember', 'removeChannelMember', 'editChannel', 'deleteChannel']);
+    await expect(page.getByRole('region', { name: 'Changes needing attention' })).toHaveCount(0);
+  } finally { release(); }
 });
 
 test('late channel reads cannot appear under another channel heading', async ({ page }) => {

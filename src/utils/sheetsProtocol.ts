@@ -46,6 +46,7 @@ export interface SheetMessage {
 }
 
 export interface EnrichedMessage extends SheetMessage {
+  delivery?: 'sending' | 'failed';
   reactions: ReactionMap;
   reply_count: number;
   last_reply_at?: string;
@@ -283,7 +284,7 @@ export function enrichMessagesForChannel(
   });
 }
 
-function generateId(prefix: string): string {
+function defaultGenerateId(prefix: string): string {
   const rand = Math.random().toString(36).substring(2, 8);
   return `${prefix}_${Date.now().toString(36)}_${rand}`;
 }
@@ -291,7 +292,8 @@ function generateId(prefix: string): string {
 export function executeSheetAction(
   currentDb: SheetsDatabase,
   payload: GasRequestPayload,
-  nowIso = new Date().toISOString()
+  nowIso = new Date().toISOString(),
+  generateId: (prefix: string) => string = defaultGenerateId
 ): { db: SheetsDatabase; response: GasResponse } {
   const db: SheetsDatabase = {
     Users: [...currentDb.Users],

@@ -137,6 +137,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
                   <p className="mt-1 text-sm leading-relaxed break-words whitespace-pre-wrap text-[#363c40]">
                     {reply.content}
                   </p>
+                  {reply.delivery && <p role="status" className={'mt-1 text-xs ' + (reply.delivery === 'failed' ? 'text-red-800' : 'text-slate-600')}>{reply.delivery === 'failed' ? 'Not confirmed — your reply is kept.' : 'Sending…'}</p>}
                 </div>
               </div>
             ))}

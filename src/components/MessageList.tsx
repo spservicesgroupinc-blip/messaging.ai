@@ -33,7 +33,7 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, currentUser,
   const isDm = Boolean(activeChannel?.dm_participants);
   const ChannelIcon = isDm ? MessagesSquare : activeChannel?.is_private ? LockKeyhole : Hash;
 
-  if (loadingChannel) return (
+  if (loadingChannel && messages.length === 0) return (
     <div className='space-y-7 px-4 py-8 sm:px-6' role='status' aria-label='Loading messages' aria-busy='true'>
       {[0, 1, 2, 3].map((number) => <div key={number} className='flex animate-pulse items-start gap-3 motion-reduce:animate-none'>
         <div className='h-9 w-9 shrink-0 rounded-md bg-[#ecefed]' />

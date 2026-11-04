@@ -11,6 +11,7 @@ import { Conversation } from './components/Conversation';
 import { MobileDirectory, MobileTabBar } from './components/MobileNavigation';
 import { WorkspaceShell } from './components/WorkspaceShell';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { BackgroundChanges } from './components/BackgroundChanges';
 import { useWorkspace } from './hooks/useWorkspace';
 import { useKeyboardVisible, useMobile, useOnline } from './hooks/useDeviceState';
 import { useMobileNavigation } from './hooks/useMobileNavigation';
@@ -94,6 +95,12 @@ function AppContent() {
       onCreateChannel={isPrivate => showOverlay({ kind: 'create', isPrivate })} onEditChannel={channel => showOverlay({ kind: 'edit', channel })} onDeleteChannel={channel => showOverlay({ kind: 'delete', channel })}
       onManageChannelMembers={channel => { choose(channel); showOverlay({ kind: 'members' }); }} onSignOut={signOut} />
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <BackgroundChanges failures={w.failures} pendingCount={w.pendingCount} backupFailed={w.backupFailed} onDismiss={w.dismissFailure} onRestore={id => {
+        const restored = w.restoreDraft(id);
+        const channel = w.channels.find(item => item.channel_id === restored?.channelId);
+        if (channel) choose(channel);
+        if (restored?.parentMessageId) showOverlay({ kind: 'thread', id: restored.parentMessageId });
+      }} />
       {(!online || w.error) && <div role={w.error ? 'alert' : 'status'} className="flex shrink-0 items-center justify-between gap-2 border-b border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950"><span>{!online ? 'Offline — your drafts stay on this device.' : w.error}</span>{online && <button onClick={() => void w.refresh()} className="touch-target shrink-0 rounded px-2 font-semibold">Retry</button>}</div>}
       {mobile && !showConversation ? <MobileDirectory key={nav.tab} tab={nav.tab} user={w.user} users={w.users} channels={w.channels} onSelect={choose} onPerson={id => void openPerson(id)} onCreate={isPrivate => showOverlay({ kind: 'create', isPrivate })}
         onEdit={channel => showOverlay({ kind: 'edit', channel })} onDelete={channel => showOverlay({ kind: 'delete', channel })} onMembers={channel => { choose(channel); showOverlay({ kind: 'members' }); }} onSignOut={signOut} onPeople={() => nav.showTab('people')} /> : <>
