@@ -31,12 +31,12 @@ function NavigationSection({ title, children, onAdd, addLabel }: {
     <section>
       <div className='mb-1 flex h-8 items-center justify-between px-1'>
         <button type='button' onClick={() => setExpanded(!expanded)} aria-expanded={expanded} aria-controls={contentId}
-          className='flex min-w-0 items-center gap-1.5 rounded px-1 py-1 text-xs font-semibold text-[#626d65] hover:text-[#303934]'>
+          className='flex min-w-0 items-center gap-1.5 rounded px-1 py-1 text-xs font-semibold text-[#64748b] hover:text-[#475569]'>
           {expanded ? <ChevronDown aria-hidden='true' className='h-3 w-3' /> : <ChevronRight aria-hidden='true' className='h-3 w-3' />}
           {title}
         </button>
         {onAdd && <button type='button' onClick={onAdd} aria-label={addLabel} title={addLabel}
-          className='rounded p-1.5 text-[#626d65] transition-colors hover:bg-[#e6eae6] hover:text-[#303934]'>
+          className='rounded p-1.5 text-[#64748b] transition-colors hover:bg-[#f1f5f9] hover:text-[#475569]'>
           <Plus aria-hidden='true' className='h-3.5 w-3.5' />
         </button>}
       </div>
@@ -148,7 +148,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               />
             ))}
             {privateChannels.length === 0 && <button type='button' onClick={() => onCreateChannel(true)}
-              className='flex min-h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-sm text-[#626d65] hover:bg-[#e9ece9] hover:text-[#303934]'>
+              className='flex min-h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-sm text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#475569]'>
               <Lock aria-hidden='true' className='h-4 w-4 opacity-65' strokeWidth={1.75} /> Create private channel
             </button>}
           </NavigationSection>
@@ -169,11 +169,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className='flex shrink-0 items-center gap-2.5 border-t border-[#e1e5e1] p-3.5'>
           <Avatar userName={currentUser.full_name} size='md' className='shrink-0 !rounded-lg' />
           <div className='min-w-0 flex-1'>
-            <div className='truncate text-xs font-semibold text-[#303934]'>{currentUser.full_name}</div>
+            <div className='truncate text-xs font-semibold text-[#475569]'>{currentUser.full_name}</div>
             <div className='mt-0.5 truncate text-[11px] text-[#626d65]'>{currentUser.role_title || currentUser.email}</div>
           </div>
           <button type='button' onClick={onSignOut} aria-label='Sign out' title='Sign out'
-            className='rounded-md p-2 text-[#626d65] transition-colors hover:bg-[#e6eae6] hover:text-[#303934]'>
+            className='rounded-md p-2 text-[#64748b] transition-colors hover:bg-[#f1f5f9] hover:text-[#475569]'>
             <LogOut aria-hidden='true' className='h-4 w-4' strokeWidth={1.75} />
           </button>
         </div>

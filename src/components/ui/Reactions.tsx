@@ -15,7 +15,7 @@ export const Reactions: React.FC<ReactionsProps> = ({ reactions, currentUserId, 
         const owned = users.includes(currentUserId);
         return (
           <button key={emoji} type='button' onClick={() => onToggle(emoji)} aria-label={`${emoji}, ${users.length} ${users.length === 1 ? 'reaction' : 'reactions'}`} aria-pressed={owned}
-            className={`inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs transition-colors ${owned ? 'border-[#a4cbbb] bg-[#edf6f1] text-[#216346]' : 'border-[#e5e7e9] bg-[#f6f7f7] text-[#575e63] hover:border-[#bdc4c0]'}`}>
+            className={`inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs transition-colors ${owned ? 'border-[#93c5fd] bg-[#eff6ff] text-[#1d4ed8]' : 'border-[#e2e8f0] bg-[#f8fafc] text-[#475569] hover:border-[#cbd5e1]'}`}>
             <span>{emoji}</span><span className='font-medium tabular-nums'>{users.length}</span>
           </button>
         );

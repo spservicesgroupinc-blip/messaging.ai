@@ -38,7 +38,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ msg, prevMsg, currentU
   const isOwn = msg.user_id === currentUser?.user_id;
   const isEdited = msg.updated_at && msg.updated_at !== msg.created_at;
   const hasReactions = Object.values(msg.reactions || {}).some((users) => users.length > 0);
-  const actionClass = 'flex h-8 w-8 items-center justify-center rounded text-[#72777d] transition-colors hover:bg-[#f1f3f2] hover:text-[#20252a]';
+  const actionClass = 'flex h-8 w-8 items-center justify-center rounded text-[#64748b] transition-colors hover:bg-[#f1f5f9] hover:text-[#0f172a]';
 
   return (
     <>
@@ -57,10 +57,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({ msg, prevMsg, currentU
           )}
           {isEditing ? (
             <div className='mt-1 space-y-2 pb-2'>
-              <textarea autoFocus rows={3} aria-label='Edit message' value={editingContent} onChange={(e) => onContentChange(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') onCancelEdit(); }} className='w-full resize-y rounded-md border border-[#a4cbbb] bg-white p-2.5 text-sm leading-[21px] text-[#20252a] outline-none focus:ring-2 focus:ring-[#217a5b]/15' />
+              <textarea autoFocus rows={3} aria-label='Edit message' value={editingContent} onChange={(e) => onContentChange(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') onCancelEdit(); }} className='w-full resize-y rounded-md border border-[#94a3b8] bg-white p-2.5 text-sm leading-[21px] text-[#0f172a] outline-none focus:ring-2 focus:ring-[#2563eb]/15' />
               <div className='flex flex-wrap items-center gap-2'>
                 <button type='button' onClick={onCancelEdit} className='flex items-center gap-1.5 rounded-md border border-[#d7dcda] bg-white px-3 py-1.5 text-xs font-medium text-[#575e63] hover:bg-[#f1f3f2]'><X className='h-3 w-3' />Cancel</button>
-                <button type='button' disabled={!editingContent.trim()} onClick={() => onSave(msg.message_id)} className='flex items-center gap-1.5 rounded-md bg-[#217a5b] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#196347] disabled:opacity-40'><Check className='h-3 w-3' />Save changes</button>
+                <button type='button' disabled={!editingContent.trim()} onClick={() => onSave(msg.message_id)} className='flex items-center gap-1.5 rounded-md bg-[#2563eb] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#1e40af] disabled:opacity-40'><Check className='h-3 w-3' />Save changes</button>
               </div>
             </div>
           ) : (
@@ -71,7 +71,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ msg, prevMsg, currentU
           {(hasReactions || msg.reply_count > 0) && (
             <div className='mt-1.5 flex flex-wrap items-center gap-2 pb-0.5'>
               {hasReactions && <Reactions reactions={msg.reactions} currentUserId={currentUser?.user_id ?? ''} onToggle={(emoji) => onToggleReaction(msg.message_id, emoji)} quickEmojis={quickEmojis} />}
-              {msg.reply_count > 0 && <button type='button' onClick={() => onOpenThread(msg.message_id)} className='inline-flex items-center gap-1.5 rounded px-1 py-1 text-xs font-semibold text-[#217a5b] hover:bg-[#edf6f1] hover:underline'><MessageSquare className='h-3.5 w-3.5' />{msg.reply_count} {msg.reply_count === 1 ? 'reply' : 'replies'}<span className='hidden text-[11px] font-normal text-[#72777d] sm:inline'>View thread</span></button>}
+              {msg.reply_count > 0 && <button type='button' onClick={() => onOpenThread(msg.message_id)} className='inline-flex items-center gap-1.5 rounded px-1 py-1 text-xs font-semibold text-[#2563eb] hover:bg-[#f1f5f9] hover:underline'><MessageSquare className='h-3.5 w-3.5' />{msg.reply_count} {msg.reply_count === 1 ? 'reply' : 'replies'}<span className='hidden text-[11px] font-normal text-[#64748b] sm:inline'>View thread</span></button>}
             </div>
           )}
         </div>

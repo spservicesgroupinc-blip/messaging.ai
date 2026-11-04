@@ -220,7 +220,7 @@ export const EditChannelModal: React.FC<EditChannelModalProps> = ({
               onClick={() => setIsPrivate(false)}
               className={`flex flex-col items-start gap-2 rounded-md border p-3 text-left transition-colors ${
                 !isPrivate
-                  ? 'border-[#217a5b] bg-[#eff7f2] text-[#20252a]'
+                  ? 'border-[#2563eb] bg-[#f1f5f9] text-[#0f172a]'
                   : 'border-[#e5e7e9] bg-white text-slate-600 hover:border-slate-300'
               }`}
             >
@@ -240,7 +240,7 @@ export const EditChannelModal: React.FC<EditChannelModalProps> = ({
               onClick={() => setIsPrivate(true)}
               className={`flex flex-col items-start gap-2 rounded-md border p-3 text-left transition-colors ${
                 isPrivate
-                  ? 'border-[#217a5b] bg-[#eff7f2] text-[#20252a]'
+                  ? 'border-[#2563eb] bg-[#f1f5f9] text-[#0f172a]'
                   : 'border-[#e5e7e9] bg-white text-slate-600 hover:border-slate-300'
               }`}
             >
@@ -274,7 +274,7 @@ export const EditChannelModal: React.FC<EditChannelModalProps> = ({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder='e.g. engineering'
-                className='w-full rounded-lg border border-slate-300 bg-white py-2.5 pr-3.5 pl-10 text-sm text-[#20252a] placeholder:text-[#72777d] focus:border-[#217a5b] focus:ring-1 focus:ring-[#217a5b]/20 focus:outline-none'
+                className='w-full rounded-lg border border-slate-300 bg-white py-2.5 pr-3.5 pl-10 text-sm text-[#0f172a] placeholder:text-[#64748b] focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb]/20 focus:outline-none'
               />
             </div>
             {slugPreview && (
@@ -301,7 +301,7 @@ export const EditChannelModal: React.FC<EditChannelModalProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder='What is this channel used for?'
-              className='mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-[#20252a] placeholder:text-[#72777d] focus:border-[#217a5b] focus:ring-1 focus:ring-[#217a5b]/20 focus:outline-none'
+              className='mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#64748b] focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb]/20 focus:outline-none'
             />
           </div>
 

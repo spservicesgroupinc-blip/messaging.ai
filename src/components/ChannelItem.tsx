@@ -126,8 +126,8 @@ export const ChannelItem: React.FC<ChannelItemProps> = ({
       className={
         'group relative flex min-h-8 w-full items-center rounded-md transition-colors ' +
         (isActive
-          ? 'bg-[#e3eee8] text-[#1c6349]'
-          : 'text-[#5a625f] hover:bg-[#e9ece9] hover:text-[#252c29]')
+          ? 'bg-[#dbeafe] text-[#1d4ed8]'
+          : 'text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#0f172a]')
       }
     >
       <button

@@ -39,9 +39,9 @@ export const Composer: React.FC<ComposerProps> = ({ currentUser, activeChannelId
   return (
     <div className='shrink-0 bg-white px-3 pb-3 pt-2 sm:px-6 sm:pb-4'>
       {composerError && <div role='alert' className='mb-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800'>{composerError}</div>}
-      <form onSubmit={(event) => { event.preventDefault(); if (!unavailable && composerText.trim()) void onSend(); }} className='rounded-lg border border-[#cfd6d1] bg-white transition-colors focus-within:border-[#87ad99] focus-within:ring-2 focus-within:ring-[#217a5b]/5'>
+      <form onSubmit={(event) => { event.preventDefault(); if (!unavailable && composerText.trim()) void onSend(); }} className='rounded-lg border border-[#cbd5e1] bg-white transition-colors focus-within:border-[#94a3b8] focus-within:ring-2 focus-within:ring-[#2563eb]/5'>
         <div className='flex items-center gap-0.5 rounded-t-lg bg-[#f7f8f7] px-2 py-1.5' role='toolbar' aria-label='Message formatting'>
-          {FORMAT_ACTIONS.map(({ icon: Icon, label, marker }) => <button key={label} type='button' disabled={unavailable} onClick={() => insertFormat(marker)} title={label} aria-label={label} className='flex h-7 w-8 items-center justify-center rounded text-[#636b65] hover:bg-[#e8ece9] hover:text-[#20252a] disabled:opacity-40'><Icon className='h-4 w-4' strokeWidth={1.8} /></button>)}
+          {FORMAT_ACTIONS.map(({ icon: Icon, label, marker }) => <button key={label} type='button' disabled={unavailable} onClick={() => insertFormat(marker)} title={label} aria-label={label} className='flex h-7 w-8 items-center justify-center rounded text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#0f172a] disabled:opacity-40'><Icon className='h-4 w-4' strokeWidth={1.8} /></button>)}
         </div>
         <textarea ref={textareaRef} rows={2} aria-label='Message input' disabled={unavailable} value={composerText} onChange={(event) => onTextChange(event.target.value)}
           onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!unavailable && composerText.trim()) void onSend(); } }}
@@ -53,7 +53,7 @@ export const Composer: React.FC<ComposerProps> = ({ currentUser, activeChannelId
               {['👋', '👍', '✅', '🎉', '💚'].map((emoji) => <button key={emoji} type='button' aria-label={'Insert ' + emoji} onClick={() => { onTextChange(composerText + emoji); setEmojiOpen(false); textareaRef.current?.focus(); }} className='flex h-8 w-8 items-center justify-center rounded text-base hover:bg-[#f1f3f2]'>{emoji}</button>)}
             </div>}
           </div>
-          <button type='submit' disabled={!composerText.trim() || unavailable} aria-label='Send message' title='Send message' className='flex h-8 items-center justify-center gap-2 rounded-md bg-[#217a5b] px-3 text-xs font-medium text-white transition-colors hover:bg-[#196347] disabled:bg-[#eef1ef] disabled:text-[#a5ada7]'>
+          <button type='submit' disabled={!composerText.trim() || unavailable} aria-label='Send message' title='Send message' className='flex h-8 items-center justify-center gap-2 rounded-md bg-[#2563eb] px-3 text-xs font-medium text-white transition-colors hover:bg-[#1e40af] disabled:bg-[#f1f5f9] disabled:text-[#94a3b8]'>
             <span className='hidden sm:inline'>{sendingMessage ? 'Sending' : 'Send'}</span>{sendingMessage ? <LoaderCircle className='h-4 w-4 animate-spin' /> : <SendHorizontal className='h-4 w-4' />}
           </button>
         </div>

@@ -98,7 +98,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
           onClick={onClose}
           ref={closeRef}
           aria-label="Close thread panel"
-          className="rounded-lg p-1.5 text-[#72777d] transition-colors hover:bg-slate-100 hover:text-[#20252a]"
+          className="rounded-lg p-1.5 text-[#64748b] transition-colors hover:bg-[#f1f5f9] hover:text-[#0f172a]"
         >
           <X className="h-4 w-4" />
         </button>
@@ -169,7 +169,7 @@ export const ThreadDrawer: React.FC<ThreadDrawerProps> = ({
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             placeholder="Reply in thread..."
-            className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-[#20252a] placeholder:text-[#72777d] focus:border-[#217a5b] focus:ring-1 focus:ring-[#217a5b]/20 focus:outline-none"
+            className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-[#0f172a] placeholder:text-[#64748b] focus:border-[#2563eb] focus:ring-1 focus:ring-[#2563eb]/20 focus:outline-none"
           />
           <Button
             type="submit"

@@ -35,7 +35,7 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, currentUser,
     <div className='space-y-7 px-4 py-8 sm:px-6' role='status' aria-label='Loading messages' aria-busy='true'>
       {[0, 1, 2, 3].map((number) => <div key={number} className='flex animate-pulse items-start gap-3 motion-reduce:animate-none'>
         <div className='h-9 w-9 shrink-0 rounded-md bg-[#ecefed]' />
-        <div className='flex-1 space-y-2'><div className='h-3 w-28 rounded bg-[#e9ecea]' /><div className='h-3 w-4/5 rounded bg-[#f0f2f1]' /><div className='h-3 w-2/5 rounded bg-[#f0f2f1]' /></div>
+        <div className='flex-1 space-y-2'><div className='h-3 w-28 rounded bg-[#e2e8f0]' /><div className='h-3 w-4/5 rounded bg-[#f1f5f9]' /><div className='h-3 w-2/5 rounded bg-[#f1f5f9]' /></div>
       </div>)}
       <span className='sr-only'>Loading messages…</span>
     </div>

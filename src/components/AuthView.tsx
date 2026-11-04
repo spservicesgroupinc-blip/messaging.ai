@@ -150,7 +150,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthenticated }) => {
 
 
 
-  const inputClass = 'mt-2 h-11 w-full rounded-md border border-[#d8dcde] bg-white px-3 text-sm text-[#20252a] placeholder:text-[#72777d] transition-colors focus:border-[#217a5b] focus:outline-none focus:ring-2 focus:ring-[#217a5b]/10';
+  const inputClass = 'mt-2 h-11 w-full rounded-md border border-[#cbd5e1] bg-white px-3 text-sm text-[#0f172a] placeholder:text-[#64748b] transition-colors focus:border-[#2563eb] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/10';
 
 
 
@@ -158,7 +158,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthenticated }) => {
 
     <main className="grid min-h-dvh bg-white text-[#20252a] lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
 
-      <section className="relative hidden flex-col overflow-hidden bg-[#202b28] px-12 py-10 text-white lg:flex xl:px-20">
+      <section className="relative hidden flex-col overflow-hidden bg-[#1e293b] px-12 py-10 text-white lg:flex xl:px-20">
 
         <div className="flex items-center gap-3 text-2xl font-semibold tracking-tight">
 
@@ -202,19 +202,19 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthenticated }) => {
 
       <section className="flex min-w-0 flex-col px-6 py-8 sm:px-12">
 
-        <div className="flex items-center gap-2 text-xl font-semibold tracking-tight lg:hidden"><span className="flex h-8 w-8 items-center justify-center rounded-md bg-[#217a5b] text-white">r</span>relay</div>
+        <div className="flex items-center gap-2 text-xl font-semibold tracking-tight lg:hidden"><span className="flex h-8 w-8 items-center justify-center rounded-md bg-[#2563eb] text-white">r</span>relay</div>
 
         <div className="flex justify-end text-xs text-[#72777d]">
 
           {mode === 'login' ? 'New to Relay?' : 'Already have an account?'}
 
-          <button type="button" onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); }} className="ml-2 font-semibold text-[#217a5b] underline-offset-4 hover:underline">{mode === 'login' ? 'Create an account' : 'Sign in'}</button>
+          <button type="button" onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); }} className="ml-2 font-semibold text-[#2563eb] underline-offset-4 hover:underline">{mode === 'login' ? 'Create an account' : 'Sign in'}</button>
 
         </div>
 
         <div className="mx-auto my-auto w-full max-w-[380px] py-12">
 
-          <p className="mb-3 text-xs font-semibold tracking-widest text-[#217a5b] uppercase">Your workspace awaits</p>
+          <p className="mb-3 text-xs font-semibold tracking-widest text-[#2563eb] uppercase">Your workspace awaits</p>
 
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{mode === 'login' ? 'Welcome back.' : 'Make room for better work.'}</h1>
 

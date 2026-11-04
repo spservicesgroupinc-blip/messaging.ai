@@ -25,7 +25,7 @@ export const Avatar: React.FC<AvatarProps> = ({ userName, size = 'md', className
   for (let i = 0; i < name.length; i++) hash = (name.charCodeAt(i) + ((hash << 5) - hash)) | 0;
   return (
     <div role='img' aria-label={name}
-      className={`flex shrink-0 select-none items-center justify-center rounded-md font-semibold tracking-wide ${AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]} ${AVATAR_SIZES[size]} ${isOwn ? 'ring-1 ring-[#217a5b]/30 ring-offset-1' : ''} ${className}`}>
+      className={`flex shrink-0 select-none items-center justify-center rounded-md font-semibold tracking-wide ${AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]} ${AVATAR_SIZES[size]} ${isOwn ? 'ring-1 ring-[#2563eb]/30 ring-offset-1' : ''} ${className}`}>
       {initials}
     </div>
   );
