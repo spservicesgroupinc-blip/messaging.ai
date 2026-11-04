@@ -100,6 +100,7 @@ export interface GasRequestPayload {
 
 export interface GasResponse {
   ok: boolean;
+  code?: string;
   error?: string;
   user?: PublicUser;
   users?: PublicUser[];

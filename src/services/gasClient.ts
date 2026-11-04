@@ -53,13 +53,18 @@ export async function callSheetsBackend(
   payload: GasRequestPayload,
   signal?: AbortSignal
 ): Promise<GasResponse> {
-  const timeout = AbortSignal.timeout(15000);
-  const res = await fetch('/api/gas', {
-    signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error('Unable to connect. Please try again.');
-  return (await res.json()) as GasResponse;
+  const timeout = AbortSignal.timeout(30000);
+  const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch('/api/gas', {
+      signal: requestSignal,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Unable to connect. Please try again.');
+    const result = (await res.json()) as GasResponse;
+    // A lock rejection guarantees the write never started. Never retry uncertain writes.
+    if (result.ok || result.code !== 'LOCK_BUSY' || attempt >= 1) return result;
+  }
 }

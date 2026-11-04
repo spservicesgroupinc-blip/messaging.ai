@@ -79,6 +79,69 @@ test('failed main and thread sends preserve drafts and show errors', async ({ pa
   await page.getByRole('button', { name: 'Close thread panel' }).click(); await thread(page); await expect(reply).toHaveValue('Keep my reply');
 });
 
+for (const firstFails of [false, true]) test(`a thread reply waits for a pending channel send (${firstFails ? 'failed' : 'successful'} first send)`, async ({ page }) => {
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  const sent: string[] = [];
+  await setup(page, async (payload, route) => {
+    if (payload.action !== 'sendMessage') return;
+    sent.push(payload.content);
+    if (sent.length === 1) {
+      await held;
+      if (firstFails) {
+        await route.fulfill({ json: { ok: false, error: 'Send failed. Your draft was kept.' } });
+        return true;
+      }
+    }
+    await route.fulfill({ json: { ok: true, messages: messages() } });
+    return true;
+  });
+  await open(page);
+  await page.getByRole('textbox', { name: 'Message input', exact: true }).fill('Main message');
+  await page.getByRole('button', { name: 'Send message', exact: true }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  await thread(page);
+  const reply = page.getByRole('textbox', { name: 'Reply in thread', exact: true });
+  await reply.fill('Thread reply');
+  await page.getByRole('button', { name: 'Send thread reply' }).click();
+  try {
+    await expect(reply).toBeDisabled();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    expect(sent).toEqual(['Main message']);
+  } finally { release(); }
+  await expect(reply).toHaveValue('');
+  expect(sent).toEqual(['Main message', 'Thread reply']);
+  await page.getByRole('button', { name: 'Close thread panel' }).click();
+  await expect(page.getByRole('textbox', { name: 'Message input', exact: true })).toHaveValue(firstFails ? 'Main message' : '');
+});
+
+test('sign-out cancels queued actions before they reach the backend', async ({ page }) => {
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  const sent: string[] = [];
+  await setup(page, async (payload, route) => {
+    if (payload.action !== 'sendMessage') return;
+    sent.push(payload.content);
+    await held;
+    await route.fulfill({ json: { ok: true, messages: messages() } }).catch(() => {});
+    return true;
+  });
+  await open(page);
+  await page.getByRole('textbox', { name: 'Message input', exact: true }).fill('In flight');
+  await page.getByRole('button', { name: 'Send message', exact: true }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  await thread(page);
+  await page.getByRole('textbox', { name: 'Reply in thread', exact: true }).fill('Do not send');
+  await page.getByRole('button', { name: 'Send thread reply' }).click();
+  await expect(page.getByRole('textbox', { name: 'Reply in thread', exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: 'Close thread panel' }).click();
+  await page.getByRole('button', { name: 'Channels', exact: true }).click();
+  try { await page.getByRole('button', { name: 'Sign out', exact: true }).click(); }
+  finally { release(); }
+  await expect(page.getByRole('button', { name: 'Sign in to Relay', exact: true })).toBeVisible();
+  expect(sent).toEqual(['In flight']);
+});
+
 test('late channel reads cannot appear under another channel heading', async ({ page }) => {
   await setup(page, async (payload, route) => {
     if (payload.action !== 'getMessages') return;

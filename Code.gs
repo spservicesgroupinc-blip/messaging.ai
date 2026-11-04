@@ -72,13 +72,41 @@ function doPost(e) {
   return handleRequest(payload);
 }
 
+// Execution-local snapshots avoid repeated Sheet reads while the lock is held.
+var requestTables = null;
+
 function handleRequest(payload) {
-  var lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  var lock = null;
+  var acquired = false;
   try {
+    requestTables = {};
+    lock = LockService.getScriptLock();
+    acquired = lock.tryLock(10000);
+    if (!acquired) {
+      // No action has executed: the client may safely retry this explicit response.
+      return jsonResponse({ ok: false, code: 'LOCK_BUSY', error: 'Workspace is busy. Please try again shortly.' });
+    }
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    ensureSchema(ss);
-    var nowIso = new Date().toISOString();
+    var needsFlush = true;
+    try {
+      var schemaChanged = ensureSchema(ss);
+      var action = payload.action || 'ping';
+      var readOnly = ['ping', 'inspectSheets', 'getBootstrap', 'getMessages'].indexOf(action) !== -1;
+      needsFlush = schemaChanged || !readOnly;
+      return dispatchRequest(ss, payload, new Date().toISOString());
+    } finally {
+      // Commit partial writes too if a handler throws, before releasing the lock.
+      if (needsFlush) SpreadsheetApp.flush();
+    }
+  } catch (err) {
+    return jsonResponse({ ok: false, error: String(err && err.message ? err.message : err) });
+  } finally {
+    requestTables = null;
+    if (acquired) lock.releaseLock();
+  }
+}
+
+function dispatchRequest(ss, payload, nowIso) {
     var action = payload.action || 'ping';
 
     if (action === 'ping' || action === 'initSheets') {
@@ -164,25 +192,23 @@ function handleRequest(payload) {
     }
 
     return jsonResponse({ ok: false, error: 'Unsupported action: ' + action });
-  } catch (err) {
-    return jsonResponse({ ok: false, error: String(err && err.message ? err.message : err) });
-  } finally {
-    lock.releaseLock();
-  }
 }
 
 function ensureSchema(ss) {
+  var changed = false;
   var sheetNames = Object.keys(SHEET_SCHEMAS);
   for (var i = 0; i < sheetNames.length; i++) {
     var name = sheetNames[i];
     var headers = SHEET_SCHEMAS[name];
     var sheet = ss.getSheetByName(name);
     if (!sheet) {
+      changed = true;
       sheet = ss.insertSheet(name);
       sheet.appendRow(headers);
       sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#f1f5f9');
       sheet.setFrozenRows(1);
     } else if (sheet.getLastRow() === 0) {
+      changed = true;
       sheet.appendRow(headers);
       sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#f1f5f9');
       sheet.setFrozenRows(1);
@@ -191,6 +217,7 @@ function ensureSchema(ss) {
 
   var channels = readTable(ss, 'Channels');
   if (channels.length === 0) {
+    changed = true;
     var nowIso = new Date().toISOString();
     appendObjectRow(ss, 'Channels', {
       channel_id: 'ch_general',
@@ -211,9 +238,11 @@ function ensureSchema(ss) {
       dm_participants: ''
     });
   }
+  return changed;
 }
 
 function readTable(ss, sheetName) {
+  if (requestTables && requestTables[sheetName]) return requestTables[sheetName];
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet || sheet.getLastRow() <= 1) return [];
   var headers = SHEET_SCHEMAS[sheetName];
@@ -232,6 +261,7 @@ function readTable(ss, sheetName) {
     }
     rows.push(obj);
   }
+  if (requestTables) requestTables[sheetName] = rows;
   return rows;
 }
 
@@ -244,6 +274,7 @@ function appendObjectRow(ss, sheetName, obj) {
     row.push(obj[key] !== undefined ? obj[key] : '');
   }
   sheet.appendRow(row);
+  if (requestTables) delete requestTables[sheetName];
 }
 
 function overwriteTable(ss, sheetName, objects) {
@@ -260,6 +291,16 @@ function overwriteTable(ss, sheetName, objects) {
     matrix.push(row);
   }
   sheet.getRange(1, 1, matrix.length, headers.length).setValues(matrix);
+  if (requestTables) delete requestTables[sheetName];
+}
+
+// Row indexes are from readTable, which preserves the sheet's row order.
+// Keep the script lock held until these writes have been flushed.
+function updateObjectRow(ss, sheetName, index, obj) {
+  var headers = SHEET_SCHEMAS[sheetName];
+  var row = headers.map(function(key) { return obj[key] !== undefined ? obj[key] : ''; });
+  ss.getSheetByName(sheetName).getRange(index + 2, 1, 1, headers.length).setValues([row]);
+  if (requestTables) delete requestTables[sheetName];
 }
 
 function hashPassword(password, email) {
@@ -439,7 +480,7 @@ function handleLogin(ss, payload, nowIso) {
         return jsonResponse({ ok: false, error: 'Invalid password for this account.' });
       }
       users[i].last_seen_at = nowIso;
-      overwriteTable(ss, 'Users', users);
+      updateObjectRow(ss, 'Users', i, users[i]);
       var channels = readTable(ss, 'Channels');
       var memberships = readTable(ss, 'ChannelMembers');
       var accessible = channels.filter(function(ch) {
@@ -572,11 +613,11 @@ function handleEditMessage(ss, payload, nowIso) {
       allMessages[i].content = content;
       allMessages[i].updated_at = nowIso;
       channelId = allMessages[i].channel_id;
+      updateObjectRow(ss, 'Messages', i, allMessages[i]);
       break;
     }
   }
   if (!channelId) return jsonResponse({ ok: false, error: 'Message not found.' });
-  overwriteTable(ss, 'Messages', allMessages);
   return jsonResponse({
     ok: true,
     messages: enrichMessages(allMessages, channelId),
@@ -633,11 +674,11 @@ function handleToggleReaction(ss, payload, nowIso) {
       }
       allMessages[i].reactions_json = JSON.stringify(reactions);
       channelId = allMessages[i].channel_id;
+      updateObjectRow(ss, 'Messages', i, allMessages[i]);
       break;
     }
   }
   if (!channelId) return jsonResponse({ ok: false, error: 'Message not found.' });
-  overwriteTable(ss, 'Messages', allMessages);
   return jsonResponse({
     ok: true,
     messages: enrichMessages(allMessages, channelId),

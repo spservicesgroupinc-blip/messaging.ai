@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { callSheetsBackend, getSavedActiveChannelId, getSavedSessionUser, saveActiveChannelId, saveSessionUser } from '../services/gasClient';
 import { drafts } from '../utils/drafts';
 import { RequestGate } from '../utils/requestGate';
+import { MutationQueue } from '../utils/mutationQueue';
 import type { EnrichedMessage, GasRequestPayload, GasResponse, PublicUser, SheetChannel, SheetChannelMember } from '../utils/sheetsProtocol';
 
 export interface ActionResult { ok: boolean; error?: string }
@@ -24,7 +25,7 @@ export function useWorkspace() {
   const gate = useRef(new RequestGate());
   const read = useRef<AbortController | null>(null);
   const refreshing = useRef(false);
-  const mutations = useRef(new Set<string>());
+  const mutations = useRef(new MutationQueue());
   const controllers = useRef(new Set<AbortController>());
 
   const setActive = useCallback((id: string) => {
@@ -42,6 +43,7 @@ export function useWorkspace() {
     gate.current.reset(); read.current?.abort();
     controllers.current.forEach(controller => controller.abort());
     controllers.current.clear();
+    mutations.current = new MutationQueue();
   }, []);
 
   const refresh = useCallback(async () => {
@@ -129,23 +131,25 @@ export function useWorkspace() {
     if (!current) return { ok: false, error: 'Please sign in.' };
     if (!navigator.onLine) return { ok: false, error: 'You are offline. Reconnect, then try again.' };
     const channelId = payload.channelId ?? activeRef.current;
-    const scope = channelId || 'workspace';
-    if (mutations.current.has(scope)) return { ok: false, error: 'An action is still in progress. Please try again.' };
-    mutations.current.add(scope);
-    const metadataTicket = gate.current.begin('workspace');
-    const messageTicket = gate.current.begin('messages:' + channelId);
     const controller = new AbortController(); controllers.current.add(controller);
     try {
-      const res = await callSheetsBackend({ ...payload, channelId, userId: current.user_id }, controller.signal);
-      if (userRef.current?.user_id !== current.user_id || controller.signal.aborted) return { ok: false, error: 'Conversation changed. Your draft was kept.' };
-      if (res.ok) {
-        if (gate.current.isCurrent(metadataTicket)) applyMetadata(res);
-        if (gate.current.isCurrent(messageTicket)) saveMessages(res.channel?.channel_id ?? channelId, res);
-      }
-      return res.ok ? res : { ...res, error: res.error || 'The action failed. Please try again.' };
+      return await mutations.current.run(async () => {
+        // Capture the conversation when submitted; never send queued work after sign-out.
+        if (controller.signal.aborted || userRef.current?.user_id !== current.user_id) return { ok: false, error: 'Session changed. Your draft was kept.' };
+        if (!navigator.onLine) return { ok: false, error: 'You are offline. Reconnect, then try again.' };
+        const metadataTicket = gate.current.begin('workspace');
+        const messageTicket = gate.current.begin('messages:' + channelId);
+        const res = await callSheetsBackend({ ...payload, channelId, userId: current.user_id }, controller.signal);
+        if (userRef.current?.user_id !== current.user_id || controller.signal.aborted) return { ok: false, error: 'Session changed. Your draft was kept.' };
+        if (res.ok) {
+          if (gate.current.isCurrent(metadataTicket)) applyMetadata(res);
+          if (gate.current.isCurrent(messageTicket)) saveMessages(res.channel?.channel_id ?? channelId, res);
+        }
+        return res.ok ? res : { ...res, error: res.error || 'The action failed. Please try again.' };
+      });
     } catch (err) {
       return { ok: false, error: err instanceof Error && err.name !== 'AbortError' ? err.message : 'Connection interrupted. Please try again.' };
-    } finally { mutations.current.delete(scope); controllers.current.delete(controller); }
+    } finally { controllers.current.delete(controller); }
   }, [applyMetadata, saveMessages]);
 
   const authenticate = (res: GasResponse) => {
