@@ -11,12 +11,17 @@ export function useMobileNavigation(onConversation: (id: string) => void, closeO
     window.addEventListener('popstate', pop);
     return () => window.removeEventListener('popstate', pop);
   }, [onConversation, closeOverlay]);
-  const navigate = useCallback((next: MobileRoute) => { history.pushState({ ...history.state, relayMobile: next }, ''); setRoute(next); closeOverlay(); }, [closeOverlay]);
+  const navigate = useCallback((next: MobileRoute) => {
+    const state = { ...history.state, relayMobile: next };
+    delete state.relayOverlay;
+    if (history.state?.relayOverlay) history.replaceState(state, ''); else history.pushState(state, '');
+    setRoute(next); closeOverlay();
+  }, [closeOverlay]);
   return {
     ...route,
     showTab: (tab: MobileTab) => navigate({ tab, conversation: null }),
     open: (id: string, tab: MobileTab) => navigate({ tab, conversation: id }),
     back: () => { if (history.state?.relayMobile?.conversation) history.back(); else navigate({ tab: route.tab, conversation: null }); },
-    reset: () => { history.replaceState({ ...history.state, relayMobile: ROOT }, ''); setRoute(ROOT); },
+    reset: () => { history.replaceState({ relayMobile: ROOT }, ''); setRoute(ROOT); },
   };
 }

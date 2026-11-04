@@ -12,12 +12,12 @@ interface HeaderProps {
   syncing: boolean;
   isMembersDrawerOpen: boolean;
   onToggleMembers: () => void;
-  onToggleMobileSidebar: () => void;
+  onBack: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   activeChannel, channelDisplayName, memberCount, searchQuery, onSearchChange, onRefresh,
-  syncing, isMembersDrawerOpen, onToggleMembers, onToggleMobileSidebar,
+  syncing, isMembersDrawerOpen, onToggleMembers, onBack,
 }) => {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const ChannelIcon = activeChannel?.dm_participants ? Users : activeChannel?.is_private ? Lock : Hash;
@@ -26,7 +26,7 @@ export const Header: React.FC<HeaderProps> = ({
     <header className='relative z-10 shrink-0 border-b border-slate-200 bg-white'>
       <div className='flex h-14 items-center justify-between gap-1 px-2 sm:h-16 sm:gap-3 sm:px-6'>
         <div className='flex min-w-0 flex-1 items-center gap-1 sm:gap-3'>
-          <button type='button' onClick={onToggleMobileSidebar} aria-label='Back to conversations'
+          <button type='button' onClick={onBack} aria-label='Back to conversations'
             className='flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-[#64748b] hover:bg-[#f1f5f9] lg:hidden'>
             <ArrowLeft aria-hidden='true' className='h-5 w-5' />
           </button>

@@ -1,9 +1,23 @@
 # Relay interface
 
-The workspace puts conversations first: a compact ink app rail, a quiet light channel sidebar, and a white conversation surface. Forest green identifies selected channels and primary actions. Message authors, timestamps, replies, and reactions have distinct weights without turning messages into cards.
+Relay keeps conversations central: a compact slate desktop rail, a light channel sidebar, and a white message surface. Blue identifies primary actions and selected navigation. Use the system sans-serif stack, 14px desktop body text, 16px mobile inputs, 6–8px control radii, thin neutral borders, and visible blue focus states. Use the semantic tokens in `src/index.css`; do not introduce green primary hover/focus states or fabricated unread/online indicators.
 
-The existing channel, direct message, member, thread, reaction, and authentication contracts remain in place. Navigation controls must act on real workspace data; do not invent unread counts, online indicators, or unsupported actions.
+## Mobile navigation and composing
 
-Use the system sans-serif stack, 14px body text, 6–8px control radii, thin neutral borders, and visible keyboard focus. At widths below 1024px, navigation and detail panels become overlays; the app rail disappears. The conversation and composer must fit a 320px viewport. Dialogs support Escape and keyboard focus management. Respect reduced motion and device safe areas.
+Below 1024px, Channels, DMs, and People use full-width lists with persistent bottom navigation. Selecting a conversation keeps its parent tab selected. The header Back control and browser/device Back return through the navigation history. Full-screen panels and action sheets hide the bar; the keyboard also hides it to preserve space. Account/sign-out remains available in list headers. Desktop retains its rail and sidebar.
 
-Validate changes with `npm run lint`, `npm run build`, and `node --import tsx --test src/utils/sheetsProtocol.test.ts`. Check authentication, channel selection, direct messages, sending/editing, reactions, threads, member panels, search, and channel creation in an isolated local workspace at desktop and mobile widths. Test fixtures must never be added to the real conversations or production backend.
+The chat shell and overlays use the visible viewport height/offset and device safe areas. Inputs remain at 16px on phones, browser zoom stays enabled, and landscape remains supported. Touch controls have at least 44×44px targets. Test the 320px layout, wide phone landscape, and keyboard resizing.
+
+Phone Return inserts a newline; desktop Enter sends and Shift+Enter inserts a newline. Composition events must never submit prematurely. The composer grows to 160px and then scrolls internally. Formatting and emoji insert at the current selection. Existing-channel and thread drafts save locally under user/channel/thread keys, survive reopening, and clear only after confirmed sends or explicit clearing. Sign-out clears that user's drafts. Storage errors retain in-memory text with a warning. Offline drafting does not enqueue or automatically send messages.
+
+## Reliability and accessibility
+
+Message responses belong to their originating channel and session. Obsolete reads are aborted; older snapshots cannot replace newer ones. All mutations report failures without discarding text. Polling and SSE use a stable user ID, avoid overlapping refreshes, and pause while offline or hidden. The serverless events capability closes its one-shot stream and relies on polling.
+
+Open conversations at the latest message. Keep the reading position when incoming messages arrive away from the bottom and expose a New messages action. Use one modal at a time with background inertness, trapped focus, Escape dismissal, and focus restoration. Docked desktop panels remain non-modal. Errors and connection state use visible text and appropriate live regions.
+
+## Verification
+
+Run `npm test`, `npm run lint`, `npm run build`, and `npm run test:e2e`. Install browser binaries once with `npx playwright install chromium webkit`. Optional `PLAYWRIGHT_CHROMIUM_EXECUTABLE` and `PLAYWRIGHT_WEBKIT_EXECUTABLE` environment variables select existing browser binaries.
+
+Browser tests intercept every backend request and use isolated local data. They must never create test conversations or users in production. Cover navigation, drafts, failed sends, delayed responses, keyboard resizing, focus management, scroll behavior, and WCAG A/AA accessibility scans across mobile and desktop widths. Physical iPhone/Android keyboard, safe-area, and installed home-screen behavior require device verification.

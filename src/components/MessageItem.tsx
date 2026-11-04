@@ -80,7 +80,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ msg, prevMsg, currentU
             </div>
           )}
         </div>
-        {!isEditing && <button type='button' disabled={pending} onClick={() => setActionsOpen(true)} aria-label='Show message actions' aria-haspopup='dialog' aria-expanded={actionsOpen} className='touch-target shrink-0 rounded text-slate-600 hover:bg-slate-100'><Ellipsis className='h-4 w-4' /></button>}
+        {!isEditing && <button type='button' disabled={pending} onClick={event => { event.currentTarget.focus(); setActionsOpen(true); }} aria-label='Show message actions' aria-haspopup='dialog' aria-expanded={actionsOpen} className='touch-target shrink-0 rounded text-slate-600 hover:bg-slate-100'><Ellipsis className='h-4 w-4' /></button>}
         {actionsOpen && <ActionSheet title="Message actions" onClose={() => setActionsOpen(false)}>
           <div className="flex gap-2 px-2" role="group" aria-label="Quick reactions">{quickEmojis.map(emoji => <button key={emoji} className="touch-target rounded text-xl hover:bg-slate-100" aria-label={'React with ' + emoji} onClick={() => { setActionsOpen(false); onToggleReaction(msg.message_id, emoji); }}>{emoji}</button>)}</div>
           <button className="sheet-action" onClick={() => { setActionsOpen(false); onOpenThread(msg.message_id); }}><MessageSquare size={18} />Reply in thread</button>

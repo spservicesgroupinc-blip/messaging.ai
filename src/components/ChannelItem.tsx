@@ -22,7 +22,7 @@ export function ChannelItem({ channel, isActive, currentUser, workspaceUsers = [
       {isDm && partner ? <Avatar userName={partner.full_name} size="sm" className="!h-6 !w-6" /> : channel.is_private ? <Lock aria-hidden="true" className="h-4 w-4 shrink-0" /> : <Hash aria-hidden="true" className="h-4 w-4 shrink-0" />}
       <span className="truncate">{label}</span>
     </button>
-    {canManage && <button type="button" aria-label={'Channel options for ' + channel.name} aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)} className="touch-target shrink-0 rounded-md hover:bg-slate-200"><MoreHorizontal size={18} /></button>}
+    {canManage && <button type="button" aria-label={'Channel options for ' + channel.name} aria-haspopup="dialog" aria-expanded={menuOpen} onClick={event => { event.currentTarget.focus(); setMenuOpen(true); }} className="touch-target shrink-0 rounded-md hover:bg-slate-200"><MoreHorizontal size={18} /></button>}
     {menuOpen && <ActionSheet title={'#' + channel.name} onClose={() => setMenuOpen(false)}>
       {onEditChannel && <button className="sheet-action" onClick={() => selectAction(onEditChannel)}><Pencil size={18} />Edit channel</button>}
       {onManageMembers && <button className="sheet-action" onClick={() => selectAction(onManageMembers)}><Users size={18} />Manage members</button>}

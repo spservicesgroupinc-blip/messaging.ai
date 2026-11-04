@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, Lock, LogOut, Plus, SquarePen, X } from 'lucide-react';
 import { Avatar } from './ui/Avatar';
 import { ChannelItem } from './ChannelItem';
@@ -11,7 +11,6 @@ interface SidebarProps {
   privateChannels: SheetChannel[];
   directMessageChannels?: SheetChannel[];
   activeChannelId: string | null;
-  mobileSidebarOpen: boolean;
   onSelectChannel: (id: string) => void;
   onOpenDirectMessage: (id: string) => void;
   onCreateChannel: (isPrivate: boolean) => void;
@@ -19,7 +18,6 @@ interface SidebarProps {
   onDeleteChannel?: (channel: SheetChannel) => void;
   onManageChannelMembers?: (channel: SheetChannel) => void;
   onSignOut: () => void;
-  onToggleMobileSidebar: () => void;
 }
 
 function NavigationSection({ title, children, onAdd, addLabel }: {
@@ -52,7 +50,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   privateChannels,
   directMessageChannels = [],
   activeChannelId,
-  mobileSidebarOpen,
   onSelectChannel,
   onOpenDirectMessage,
   onCreateChannel,
@@ -60,48 +57,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDeleteChannel,
   onManageChannelMembers,
   onSignOut,
-  onToggleMobileSidebar,
 }) => {
-  const sidebarRef = useRef<HTMLElement>(null);
-  const toggleMobileRef = useRef(onToggleMobileSidebar);
-  toggleMobileRef.current = onToggleMobileSidebar;
-
-  useEffect(() => {
-    if (!mobileSidebarOpen) return;
-    const desktopMedia = window.matchMedia('(min-width: 1024px)');
-    if (desktopMedia.matches) return;
-    const previousFocus = document.activeElement as HTMLElement | null;
-    sidebarRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
-    const onViewportChange = (event: MediaQueryListEvent) => {
-      if (event.matches) toggleMobileRef.current();
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (desktopMedia.matches) return;
-      if (event.key === 'Escape') toggleMobileRef.current();
-      if (event.key !== 'Tab') return;
-      const controls = sidebarRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input');
-      const focusable = controls ? Array.from(controls).filter((control) => control.getClientRects().length) : [];
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
-    };
-    desktopMedia.addEventListener('change', onViewportChange);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      desktopMedia.removeEventListener('change', onViewportChange);
-      document.removeEventListener('keydown', onKeyDown);
-      previousFocus?.focus();
-    };
-  }, [mobileSidebarOpen]);
-
   return (
     <>
-      {mobileSidebarOpen && <button type='button' aria-label='Close navigation sidebar'
-        className='fixed inset-0 z-30 bg-[#17231e]/35 backdrop-blur-[2px] lg:hidden' onClick={onToggleMobileSidebar} />}
-      <aside ref={sidebarRef} aria-label='Workspace navigation'
-        className={'workspace-sidebar fixed inset-y-0 left-0 z-40 flex w-[252px] shrink-0 flex-col border-r border-[#e2e8f0] bg-[#f8fafc] transition-transform lg:static lg:translate-x-0 ' +
-          (mobileSidebarOpen ? 'visible translate-x-0' : 'invisible -translate-x-full lg:visible')}>
+      <aside aria-label='Workspace navigation' className='workspace-sidebar hidden w-[252px] shrink-0 flex-col border-r border-slate-200 bg-slate-50 lg:flex'>
         <div className='flex h-16 shrink-0 items-center justify-between gap-2 border-b border-slate-200 px-4'>
           <div className='flex min-w-0 items-center gap-2.5'>
             <div aria-hidden='true' className='flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-base font-bold text-white'>R<span className='text-blue-300'>.</span></div>
@@ -110,8 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className='mt-0.5 text-[11px] text-[#64748b]'>A place for your team</div>
             </div>
           </div>
-          <button type='button' aria-label='Close navigation sidebar' onClick={onToggleMobileSidebar}
-            className='rounded p-1.5 text-slate-600 hover:bg-slate-100 lg:hidden'><X className='h-4 w-4' /></button>
+
         </div>
 
         <nav aria-label='Channels and conversations' className='min-h-0 flex-1 space-y-5 overflow-y-auto px-3 pb-5 pt-4'>
