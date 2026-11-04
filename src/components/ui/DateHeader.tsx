@@ -16,7 +16,7 @@ export const DateHeader: React.FC<DateHeaderProps> = ({ date }) => {
   return (
     <div className='my-5 flex w-full items-center px-4 sm:px-6'>
       <div className='flex-1 border-t border-[#e5e7e9]' />
-      <time dateTime={date} className='rounded-full border border-[#e5e7e9] bg-white px-3 py-1 text-[11px] font-semibold text-[#575e63]'>
+      <time dateTime={date} className='rounded-full border border-[#e2e8f0] bg-white px-3 py-1 text-[11px] font-semibold text-[#64748b]'>
         {label}
       </time>
       <div className='flex-1 border-t border-[#e5e7e9]' />

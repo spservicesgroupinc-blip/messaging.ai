@@ -26,7 +26,7 @@ function renderMessage(content: string) {
     if (part.startsWith('**') && part.endsWith('**')) return <strong key={index} className='font-semibold'>{part.slice(2, -2)}</strong>;
     if (part.startsWith('_') && part.endsWith('_')) return <em key={index}>{part.slice(1, -1)}</em>;
     if (part.startsWith('~~') && part.endsWith('~~')) return <s key={index}>{part.slice(2, -2)}</s>;
-    if (part.startsWith('`') && part.endsWith('`')) return <code key={index} className='rounded border border-[#e5e7e9] bg-[#f5f6f5] px-1 py-px text-[12px] text-[#a34b48]'>{part.slice(1, -1)}</code>;
+    if (part.startsWith('`') && part.endsWith('`')) return <code key={index} className='rounded border border-[#e2e8f0] bg-[#f1f5f9] px-1 py-px text-[12px] text-[#dc2626]'>{part.slice(1, -1)}</code>;
     return part;
   });
 }
@@ -43,7 +43,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ msg, prevMsg, currentU
   return (
     <>
       {showDateHeader && <DateHeader date={msg.created_at} />}
-      <article onKeyDown={(event) => { if (event.key === 'Escape') setActionsOpen(false); }} className={`group relative flex items-start gap-3 px-4 transition-colors hover:bg-[#f8f9f8] focus-within:bg-[#f8f9f8] sm:px-6 ${grouped ? 'py-0.5' : 'mt-3 py-1.5'}`}>
+      <article onKeyDown={(event) => { if (event.key === 'Escape') setActionsOpen(false); }} className={`group relative flex items-start gap-3 px-4 transition-colors hover:bg-[#f8fafc] focus-within:bg-[#f8fafc] sm:px-6 ${grouped ? 'py-0.5' : 'mt-3 py-1.5'}`}>
         {grouped ? (
           <time dateTime={msg.created_at} className='mt-1 w-9 shrink-0 text-center text-[9px] text-[#72777d] opacity-0 group-hover:opacity-100 group-focus-within:opacity-100' aria-label={formatTimeShort(msg.created_at)}>{formatTimeShort(msg.created_at)}</time>
         ) : <Avatar userName={msg.user_name} size='md' />}
@@ -59,7 +59,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ msg, prevMsg, currentU
             <div className='mt-1 space-y-2 pb-2'>
               <textarea autoFocus rows={3} aria-label='Edit message' value={editingContent} onChange={(e) => onContentChange(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') onCancelEdit(); }} className='w-full resize-y rounded-md border border-[#94a3b8] bg-white p-2.5 text-sm leading-[21px] text-[#0f172a] outline-none focus:ring-2 focus:ring-[#2563eb]/15' />
               <div className='flex flex-wrap items-center gap-2'>
-                <button type='button' onClick={onCancelEdit} className='flex items-center gap-1.5 rounded-md border border-[#d7dcda] bg-white px-3 py-1.5 text-xs font-medium text-[#575e63] hover:bg-[#f1f3f2]'><X className='h-3 w-3' />Cancel</button>
+                <button type='button' onClick={onCancelEdit} className='flex items-center gap-1.5 rounded-md border border-[#cbd5e1] bg-white px-3 py-1.5 text-xs font-medium text-[#64748b] hover:bg-[#f1f5f9]'><X className='h-3 w-3' />Cancel</button>
                 <button type='button' disabled={!editingContent.trim()} onClick={() => onSave(msg.message_id)} className='flex items-center gap-1.5 rounded-md bg-[#2563eb] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#1e40af] disabled:opacity-40'><Check className='h-3 w-3' />Save changes</button>
               </div>
             </div>
@@ -75,9 +75,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({ msg, prevMsg, currentU
             </div>
           )}
         </div>
-        {!isEditing && <button type='button' onClick={() => setActionsOpen(!actionsOpen)} aria-label='Show message actions' aria-expanded={actionsOpen} className='hidden h-7 w-7 shrink-0 items-center justify-center rounded text-[#72777d] hover:bg-[#e8ece9] [@media(hover:none)]:flex'><Ellipsis className='h-4 w-4' /></button>}
+        {!isEditing && <button type='button' onClick={() => setActionsOpen(!actionsOpen)} aria-label='Show message actions' aria-expanded={actionsOpen} className='hidden h-7 w-7 shrink-0 items-center justify-center rounded text-[#64748b] hover:bg-[#f1f5f9] [@media(hover:none)]:flex'><Ellipsis className='h-4 w-4' /></button>}
         {!isEditing && (
-          <div role='group' aria-label={`Actions for ${msg.user_name}'s message`} className={`absolute -top-4 right-3 z-10 flex items-center rounded-md border border-[#e0e4e1] bg-white p-0.5 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 sm:right-6 ${actionsOpen ? 'opacity-100' : 'opacity-0'}`}>
+          <div role='group' aria-label={`Actions for ${msg.user_name}'s message`} className={`absolute -top-4 right-3 z-10 flex items-center rounded-md border border-[#e2e8f0] bg-white p-0.5 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 sm:right-6 ${actionsOpen ? 'opacity-100' : 'opacity-0'}`}>
             {quickEmojis.map((emoji) => <button key={emoji} type='button' title={'React with ' + emoji} aria-label={'React with ' + emoji} onClick={() => onToggleReaction(msg.message_id, emoji)} className={actionClass + ' text-sm'}>{emoji}</button>)}
             <div className='mx-0.5 h-4 border-l border-[#e5e7e9]' />
             <button type='button' onClick={() => onOpenThread(msg.message_id)} aria-label={`Reply in thread to "${msg.content.slice(0, 24)}"`} title='Reply in thread' className={actionClass}><MessageSquare className='h-4 w-4' /></button>

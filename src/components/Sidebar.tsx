@@ -36,7 +36,7 @@ function NavigationSection({ title, children, onAdd, addLabel }: {
           {title}
         </button>
         {onAdd && <button type='button' onClick={onAdd} aria-label={addLabel} title={addLabel}
-          className='rounded p-1.5 text-[#64748b] transition-colors hover:bg-[#f1f5f9] hover:text-[#475569]'>
+          className='rounded p-1.5 text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#475569]'>
           <Plus aria-hidden='true' className='h-3.5 w-3.5' />
         </button>}
       </div>
@@ -100,14 +100,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {mobileSidebarOpen && <button type='button' aria-label='Close navigation sidebar'
         className='fixed inset-0 z-30 bg-[#17231e]/35 backdrop-blur-[2px] lg:hidden' onClick={onToggleMobileSidebar} />}
       <aside ref={sidebarRef} aria-label='Workspace navigation'
-        className={'workspace-sidebar fixed inset-y-0 left-0 z-40 flex w-[252px] shrink-0 flex-col border-r border-[#e5e7e5] bg-[#f5f6f5] transition-transform lg:static lg:translate-x-0 ' +
+        className={'workspace-sidebar fixed inset-y-0 left-0 z-40 flex w-[252px] shrink-0 flex-col border-r border-[#e2e8f0] bg-[#f8fafc] transition-transform lg:static lg:translate-x-0 ' +
           (mobileSidebarOpen ? 'visible translate-x-0' : 'invisible -translate-x-full lg:visible')}>
         <div className='flex h-16 shrink-0 items-center justify-between gap-2 border-b border-[#e5e7e5] px-4'>
           <div className='flex min-w-0 items-center gap-2.5'>
             <div aria-hidden='true' className='flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#243d32] text-base font-bold text-white'>R<span className='text-[#9bcbaf]'>.</span></div>
             <div className='min-w-0'>
               <div className='truncate text-[15px] font-semibold tracking-tight text-[#242e28]'>Relay Workspace</div>
-              <div className='mt-0.5 text-[11px] text-[#626d65]'>A place for your team</div>
+              <div className='mt-0.5 text-[11px] text-[#64748b]'>A place for your team</div>
             </div>
           </div>
           <button type='button' aria-label='Close navigation sidebar' onClick={onToggleMobileSidebar}
@@ -133,7 +133,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onManageMembers={onManageChannelMembers}
               />
             ))}
-            {publicChannels.length === 0 && <p className='px-2.5 py-1 text-xs text-[#626d65]'>No channels yet</p>}
+            {publicChannels.length === 0 && <p className='px-2.5 py-1 text-xs text-[#64748b]'>No channels yet</p>}
           </NavigationSection>
           <NavigationSection title='Private channels' onAdd={() => onCreateChannel(true)} addLabel='Create private channel'>
             {privateChannels.map((channel) => (
@@ -170,7 +170,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Avatar userName={currentUser.full_name} size='md' className='shrink-0 !rounded-lg' />
           <div className='min-w-0 flex-1'>
             <div className='truncate text-xs font-semibold text-[#475569]'>{currentUser.full_name}</div>
-            <div className='mt-0.5 truncate text-[11px] text-[#626d65]'>{currentUser.role_title || currentUser.email}</div>
+            <div className='mt-0.5 truncate text-[11px] text-[#64748b]'>{currentUser.role_title || currentUser.email}</div>
           </div>
           <button type='button' onClick={onSignOut} aria-label='Sign out' title='Sign out'
             className='rounded-md p-2 text-[#64748b] transition-colors hover:bg-[#f1f5f9] hover:text-[#475569]'>

@@ -21,12 +21,12 @@ export const Reactions: React.FC<ReactionsProps> = ({ reactions, currentUserId, 
         );
       })}
       <button type='button' onClick={() => setShowQuick(!showQuick)} aria-label='Add reaction' aria-expanded={showQuick}
-        className='flex h-7 w-7 items-center justify-center rounded-full border border-[#e5e7e9] text-[#72777d] hover:bg-[#f1f3f2]'>
+        className='flex h-7 w-7 items-center justify-center rounded-full border border-[#e2e8f0] text-[#64748b] hover:bg-[#f1f5f9]'>
         <SmilePlus className='h-3.5 w-3.5' />
       </button>
       {showQuick && (
         <div className='absolute bottom-full left-0 z-20 mb-2 flex gap-1 rounded-lg border border-[#e5e7e9] bg-white p-1 shadow-sm' role='group' aria-label='Choose a reaction' onKeyDown={(e) => { if (e.key === 'Escape') setShowQuick(false); }}>
-          {quickEmojis.map((emoji) => <button key={emoji} type='button' aria-label={'React with ' + emoji} onClick={() => { onToggle(emoji); setShowQuick(false); }} className='flex h-8 w-8 items-center justify-center rounded text-base hover:bg-[#f1f3f2]'>{emoji}</button>)}
+          {quickEmojis.map((emoji) => <button key={emoji} type='button' aria-label={'React with ' + emoji} onClick={() => { onToggle(emoji); setShowQuick(false); }} className='flex h-8 w-8 items-center justify-center rounded text-base hover:bg-[#f1f5f9]'>{emoji}</button>)}
         </div>
       )}
     </div>

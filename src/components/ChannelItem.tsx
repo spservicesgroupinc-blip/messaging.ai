@@ -191,7 +191,7 @@ export const ChannelItem: React.FC<ChannelItemProps> = ({
               setMenuOpen(true);
             }}
             className={
-              'flex h-6 w-6 items-center justify-center rounded text-[#5a625f] transition-opacity hover:bg-[#d5ded8] hover:text-[#1f2924] focus:opacity-100 ' +
+              'flex h-6 w-6 items-center justify-center rounded text-[#64748b] transition-opacity hover:bg-[#f1f5f9] hover:text-[#0f172a] focus:opacity-100 ' +
               (menuOpen
                 ? 'bg-[#d5ded8] text-[#1f2924] opacity-100'
                 : 'opacity-0 group-hover:opacity-100')
@@ -219,7 +219,7 @@ export const ChannelItem: React.FC<ChannelItemProps> = ({
                   }}
                   className='flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-xs font-medium text-[#2c3530] transition-colors hover:bg-[#f2f5f3]'
                 >
-                  <Pencil className='h-3.5 w-3.5 text-[#5a625f]' />
+                  <Pencil className='h-3.5 w-3.5 text-[#64748b]' />
                   <span>Edit channel</span>
                 </button>
               )}
@@ -235,7 +235,7 @@ export const ChannelItem: React.FC<ChannelItemProps> = ({
                   }}
                   className='flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-xs font-medium text-[#2c3530] transition-colors hover:bg-[#f2f5f3]'
                 >
-                  <Users className='h-3.5 w-3.5 text-[#5a625f]' />
+                  <Users className='h-3.5 w-3.5 text-[#64748b]' />
                   <span>Manage members</span>
                 </button>
               )}
@@ -247,9 +247,9 @@ export const ChannelItem: React.FC<ChannelItemProps> = ({
                 className='flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-xs font-medium text-[#2c3530] transition-colors hover:bg-[#f2f5f3]'
               >
                 {copied ? (
-                  <Check className='h-3.5 w-3.5 text-[#1c6349]' />
+                  <Check className='h-3.5 w-3.5 text-[#2563eb]' />
                 ) : (
-                  <Copy className='h-3.5 w-3.5 text-[#5a625f]' />
+                  <Copy className='h-3.5 w-3.5 text-[#64748b]' />
                 )}
                 <span>{copied ? 'Copied name' : 'Copy channel name'}</span>
               </button>

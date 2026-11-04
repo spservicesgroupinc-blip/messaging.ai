@@ -45,7 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className='relative hidden min-w-0 max-w-64 flex-1 md:block'>
-          <Search aria-hidden='true' className='pointer-events-none absolute left-2.5 top-2 h-4 w-4 text-[#69736c]' strokeWidth={1.75} />
+          <Search aria-hidden='true' className='pointer-events-none absolute left-2.5 top-2 h-4 w-4 text-[#64748b]' strokeWidth={1.75} />
           <input type='search' aria-label='Search channel messages' value={searchQuery}
             onChange={(event) => onSearchChange(event.target.value)} placeholder='Search in this conversation'
             className='h-8 w-full rounded-md border border-[#cbd5e1] bg-[#f8fafc] pl-8 pr-3 text-xs text-[#475569] placeholder:text-[#94a3b8] focus:border-[#94a3b8] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2563eb]/10' />
@@ -71,7 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
       {mobileSearchOpen && <div className='relative px-4 pb-3 md:hidden'>
-        <Search aria-hidden='true' className='pointer-events-none absolute left-6 top-2.5 h-4 w-4 text-[#69736c]' />
+        <Search aria-hidden='true' className='pointer-events-none absolute left-6 top-2.5 h-4 w-4 text-[#64748b]' />
         <input autoFocus type='search' aria-label='Search channel messages' value={searchQuery}
           onChange={(event) => onSearchChange(event.target.value)} onKeyDown={(event) => { if (event.key === 'Escape') setMobileSearchOpen(false); }}
           placeholder='Search in this conversation' className='h-9 w-full rounded-md border border-[#cbd5e1] bg-[#f8fafc] pl-8 pr-3 text-sm text-[#475569] placeholder:text-[#94a3b8] outline-none focus:border-[#94a3b8] focus:ring-2 focus:ring-[#2563eb]/10' />

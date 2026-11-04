@@ -45,12 +45,12 @@ export const Composer: React.FC<ComposerProps> = ({ currentUser, activeChannelId
         </div>
         <textarea ref={textareaRef} rows={2} aria-label='Message input' disabled={unavailable} value={composerText} onChange={(event) => onTextChange(event.target.value)}
           onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!unavailable && composerText.trim()) void onSend(); } }}
-          placeholder={'Message ' + target} className='block max-h-40 min-h-16 w-full resize-y border-0 bg-transparent px-3.5 py-3 text-sm leading-[21px] text-[#20252a] outline-none placeholder:text-[#8b918c] disabled:opacity-50' />
+          placeholder={'Message ' + target} className='block max-h-40 min-h-16 w-full resize-y border-0 bg-transparent px-3.5 py-3 text-sm leading-[21px] text-[#0f172a] outline-none placeholder:text-[#64748b] disabled:opacity-50' />
         <div className='flex items-center justify-between px-2.5 pb-2'>
           <div className='relative'>
-            <button type='button' aria-label='Insert emoji' aria-expanded={emojiOpen} onClick={() => setEmojiOpen(!emojiOpen)} disabled={unavailable} title='Insert emoji' className='flex h-8 w-8 items-center justify-center rounded text-[#72777d] hover:bg-[#f1f3f2] disabled:opacity-40'><Smile className='h-[18px] w-[18px]' strokeWidth={1.7} /></button>
+            <button type='button' aria-label='Insert emoji' aria-expanded={emojiOpen} onClick={() => setEmojiOpen(!emojiOpen)} disabled={unavailable} title='Insert emoji' className='flex h-8 w-8 items-center justify-center rounded text-[#64748b] hover:bg-[#f1f5f9] disabled:opacity-40'><Smile className='h-[18px] w-[18px]' strokeWidth={1.7} /></button>
             {emojiOpen && <div className='absolute bottom-full left-0 z-20 mb-2 flex rounded-lg border border-[#e5e7e9] bg-white p-1 shadow-sm' role='group' aria-label='Choose emoji' onKeyDown={(event) => { if (event.key === 'Escape') setEmojiOpen(false); }}>
-              {['👋', '👍', '✅', '🎉', '💚'].map((emoji) => <button key={emoji} type='button' aria-label={'Insert ' + emoji} onClick={() => { onTextChange(composerText + emoji); setEmojiOpen(false); textareaRef.current?.focus(); }} className='flex h-8 w-8 items-center justify-center rounded text-base hover:bg-[#f1f3f2]'>{emoji}</button>)}
+              {['👋', '👍', '✅', '🎉', '💙'].map((emoji) => <button key={emoji} type='button' aria-label={'Insert ' + emoji} onClick={() => { onTextChange(composerText + emoji); setEmojiOpen(false); textareaRef.current?.focus(); }} className='flex h-8 w-8 items-center justify-center rounded text-base hover:bg-[#f1f5f9]'>{emoji}</button>)}
             </div>}
           </div>
           <button type='submit' disabled={!composerText.trim() || unavailable} aria-label='Send message' title='Send message' className='flex h-8 items-center justify-center gap-2 rounded-md bg-[#2563eb] px-3 text-xs font-medium text-white transition-colors hover:bg-[#1e40af] disabled:bg-[#f1f5f9] disabled:text-[#94a3b8]'>
